@@ -36,6 +36,11 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
     setCep(formatted);
     setCepError(""); // Limpa erro anterior
     
+    // Limpa o número quando CEP é alterado
+    if (formatted.replace(/\D/g, "").length < 8) {
+      setNumero("");
+    }
+    
     // Auto-busca quando CEP estiver completo
     if (formatted.replace(/\D/g, "").length === 8) {
       try {
@@ -47,7 +52,8 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
           uf: cepData.uf,
         });
         
-        // Move foco para o campo número
+        // Limpa o número e move foco para o campo número
+        setNumero("");
         setTimeout(() => {
           numeroInputRef.current?.focus();
         }, 100);
@@ -56,13 +62,14 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
         const errorMessage = error instanceof Error ? error.message : "CEP não encontrado";
         setCepError(errorMessage);
         
-        // Limpa endereço quando CEP é inválido
+        // Limpa endereço e número quando CEP é inválido
         setEndereco({
           logradouro: "",
           bairro: "",
           localidade: "",
           uf: "",
         });
+        setNumero("");
       }
     } else {
       // Limpa endereço se CEP incompleto
