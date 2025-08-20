@@ -42,7 +42,7 @@ class GeocodeService {
         }
         throw new Error("Falha na conexão com o serviço de geocodificação");
       }
-      throw new Error(error.message || "Erro ao geocodificar endereço");
+      throw new Error(error instanceof Error ? error.message : "Erro ao geocodificar endereço");
     }
   }
 }

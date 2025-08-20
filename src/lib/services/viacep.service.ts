@@ -80,7 +80,7 @@ export class ViaCepService {
         }
         throw new Error('Falha na conexão com o serviço de CEP');
       }
-      throw new Error(error.message || 'Erro ao buscar CEP');
+      throw new Error(error instanceof Error ? error.message : 'Erro ao buscar CEP');
     }
   }
 
