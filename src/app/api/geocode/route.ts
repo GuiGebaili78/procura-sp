@@ -35,11 +35,7 @@ class GeocodeService {
 
       console.log(`✅ [GeocodeService] Encontrados ${data.length} resultados para: "${query}"`);
       return data;
-<<<<<<< HEAD
     } catch (error: unknown) {
-=======
-    } catch (error: any) {
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
           throw new Error("Endereço não encontrado");
@@ -68,17 +64,10 @@ export async function GET(request: NextRequest) {
     const data = await geocodeService.getCoordinatesFromAddress(query);
     
     return NextResponse.json({ success: true, data });
-<<<<<<< HEAD
   } catch (error: unknown) {
     console.error("[API:Geocode] Erro:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       { success: false, message: error instanceof Error ? error.message : "Erro ao geocodificar endereço" },
-=======
-  } catch (error: any) {
-    console.error("[API:Geocode] Erro:", error?.message || error);
-    return NextResponse.json(
-      { success: false, message: error.message || "Erro ao geocodificar endereço" },
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5
       { status: 500 }
     );
   }

@@ -62,8 +62,5 @@ const database = {
   query,
   getClient,
 };
-<<<<<<< HEAD
 
 export default database;
-=======
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5

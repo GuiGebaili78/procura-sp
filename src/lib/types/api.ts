@@ -1,10 +1,6 @@
 // Tipos para as APIs do sistema Procura SP
 
-<<<<<<< HEAD
 export interface ApiResponse<T = unknown> {
-=======
-export interface ApiResponse<T = any> {
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5
   success: boolean;
   data?: T;
   message?: string;

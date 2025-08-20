@@ -163,17 +163,10 @@ export async function GET(
     const data = await viaCepService.buscarEnderecoPorCep(cep);
     
     return NextResponse.json({ success: true, data });
-<<<<<<< HEAD
   } catch (error: unknown) {
     console.error("[API:CEP] Erro:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       { success: false, message: error instanceof Error ? error.message : "Erro ao buscar CEP" },
-=======
-  } catch (error: any) {
-    console.error("[API:CEP] Erro:", error?.message || error);
-    return NextResponse.json(
-      { success: false, message: error.message || "Erro ao buscar CEP" },
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5
       { status: 500 }
     );
   }

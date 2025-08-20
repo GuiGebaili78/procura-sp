@@ -70,13 +70,8 @@ class CataBagulhoService {
       });
 
       return this.parseHTML(html);
-<<<<<<< HEAD
     } catch (error: unknown) {
       console.error("[Cata-Bagulho] Erro ao buscar dados:", error instanceof Error ? error.message : error);
-=======
-    } catch (error: any) {
-      console.error("[Cata-Bagulho] Erro ao buscar dados:", error?.message || error);
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5
       throw new Error("Erro ao buscar dados do serviço Cata-Bagulho");
     }
   }
@@ -242,17 +237,10 @@ export async function GET(request: NextRequest) {
     console.log(`[DEBUG] Dados retornados:`, JSON.stringify(data, null, 2));
     
     return NextResponse.json({ success: true, data });
-<<<<<<< HEAD
   } catch (error: unknown) {
     console.error("[API:Cata-Bagulho] Erro:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       { success: false, message: error instanceof Error ? error.message : "Erro ao buscar dados do Cata-Bagulho" },
-=======
-  } catch (error: any) {
-    console.error("[API:Cata-Bagulho] Erro:", error?.message || error);
-    return NextResponse.json(
-      { success: false, message: error.message || "Erro ao buscar dados do Cata-Bagulho" },
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5
       { status: 500 }
     );
   }

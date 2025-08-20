@@ -73,11 +73,7 @@ export class ViaCepService {
       }
 
       return data;
-<<<<<<< HEAD
     } catch (error: unknown) {
-=======
-    } catch (error: any) {
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
           throw new Error('CEP não encontrado');

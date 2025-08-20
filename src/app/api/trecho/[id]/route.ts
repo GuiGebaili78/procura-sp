@@ -84,17 +84,10 @@ export async function GET(
     const data = await trechoService.getTrechoCoordinates(id);
     
     return NextResponse.json({ success: true, data });
-<<<<<<< HEAD
   } catch (error: unknown) {
     console.error("[API:Trecho] Erro:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       { success: false, message: error instanceof Error ? error.message : "Erro ao buscar coordenadas do trecho" },
-=======
-  } catch (error: any) {
-    console.error("[API:Trecho] Erro:", error?.message || error);
-    return NextResponse.json(
-      { success: false, message: error.message || "Erro ao buscar coordenadas do trecho" },
->>>>>>> 4f16bb92810b1d33817c353dc79cc1c6383132c5
       { status: 500 }
     );
   }

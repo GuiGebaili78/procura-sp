@@ -26,12 +26,14 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
     uf: "",
   });
   const [loading, setLoading] = useState(false);
+  const [cepError, setCepError] = useState("");
   
   const numeroInputRef = useRef<HTMLInputElement>(null);
 
   const handleCepChange = async (value: string) => {
     const formatted = formatCep(value);
     setCep(formatted);
+    setCepError(""); // Limpa erro anterior
     
     // Auto-busca quando CEP estiver completo
     if (formatted.replace(/\D/g, "").length === 8) {
@@ -50,6 +52,16 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
         }, 100);
       } catch (error) {
         console.error("Erro ao buscar CEP:", error);
+        const errorMessage = error instanceof Error ? error.message : "CEP não encontrado";
+        setCepError(errorMessage);
+        
+        // Limpa endereço quando CEP é inválido
+        setEndereco({
+          logradouro: "",
+          bairro: "",
+          localidade: "",
+          uf: "",
+        });
       }
     } else {
       // Limpa endereço se CEP incompleto
@@ -147,6 +159,8 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
             onChange={(e) => handleCepChange(e.target.value)}
             onKeyPress={handleKeyPress}
             maxLength={9}
+            error={cepError}
+            helperText="Digite o CEP para buscar o endereço automaticamente"
           />
         </div>
         
