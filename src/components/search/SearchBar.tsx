@@ -27,6 +27,7 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
   });
   const [loading, setLoading] = useState(false);
   const [cepError, setCepError] = useState("");
+  const [noResultsMessage, setNoResultsMessage] = useState("");
   
   const numeroInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,6 +82,7 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
     }
 
     setLoading(true);
+    setNoResultsMessage(""); // Limpa mensagem anterior
     
     try {
       // Tenta diferentes formatos de endereço para melhorar as chances de sucesso
@@ -124,7 +126,7 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
       const results = await searchCataBagulho(coordinates.lat, coordinates.lng);
       
       if (!results || results.length === 0) {
-        onError("Nenhum serviço de Cata-Bagulho encontrado para este endereço.");
+        setNoResultsMessage("Nenhum serviço de Cata-Bagulho encontrado para este endereço.");
         return;
       }
 
@@ -229,6 +231,18 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
           "Buscar Serviços"
         )}
       </Button>
+
+      {noResultsMessage && (
+        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center">
+            <div className="text-orange-600 mr-3">📍</div>
+            <p className="text-orange-700 font-medium">{noResultsMessage}</p>
+          </div>
+          <p className="text-orange-600 text-sm mt-2">
+            Tente verificar se o endereço está correto ou procure um endereço próximo.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }

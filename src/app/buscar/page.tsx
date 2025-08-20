@@ -40,6 +40,17 @@ export default function BuscarPage() {
     setUserCoordinates(coordinates);
     setTrechoCoordinates(null); // Limpa trecho anterior
     setError("");
+    
+    // Auto-scroll para os resultados
+    setTimeout(() => {
+      const resultsSection = document.getElementById('resultados-section');
+      if (resultsSection) {
+        resultsSection.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    }, 100);
   };
 
   const handleError = (errorMessage: string) => {
@@ -75,18 +86,6 @@ export default function BuscarPage() {
           </p>
         </div>
 
-        <SearchBar
-          onSearchResults={handleSearchResults}
-          onError={handleError}
-        />
-
-        <Card padding="md" className="mb-6">
-          <ServiceSelector
-            selectedService={selectedService}
-            onServiceChange={setSelectedService}
-          />
-        </Card>
-
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
             <div className="flex items-center">
@@ -96,7 +95,19 @@ export default function BuscarPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card padding="md" className="mb-6">
+          <ServiceSelector
+            selectedService={selectedService}
+            onServiceChange={setSelectedService}
+          />
+        </Card>
+
+        <SearchBar
+          onSearchResults={handleSearchResults}
+          onError={handleError}
+        />
+
+        <div id="resultados-section" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Coluna dos Resultados */}
           <div className="space-y-6">
             {searchResults.length > 0 && (
