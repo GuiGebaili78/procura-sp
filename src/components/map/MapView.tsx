@@ -1,0 +1,186 @@
+"use client";
+
+import React, { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import { LatLngTuple, Icon, LatLngBounds } from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { TrechoCoordinates } from "../../types/cataBagulho";
+
+// Ícones customizados
+const createCustomIcon = (color: string) => new Icon({
+  iconUrl: `data:image/svg+xml;base64,${btoa(`
+    <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+      <path fill="${color}" stroke="#000" stroke-width="1" d="M12.5 0C5.596 0 0 5.596 0 12.5c0 12.5 12.5 28.5 12.5 28.5S25 25 25 12.5C25 5.596 19.404 0 12.5 0z"/>
+      <circle fill="#fff" cx="12.5" cy="12.5" r="7"/>
+    </svg>
+  `)}`,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+
+const userLocationIcon = createCustomIcon("#00ADB5");
+const trechoIcon = createCustomIcon("#FF6B6B");
+
+interface MapViewProps {
+  center: LatLngTuple;
+  userLocation?: LatLngTuple;
+  trechoCoordinates?: TrechoCoordinates | null;
+  className?: string;
+}
+
+// Componente para ajustar automaticamente a visualização do mapa
+function MapController({ 
+  userLocation, 
+  trechoCoordinates 
+}: { 
+  userLocation?: LatLngTuple; 
+  trechoCoordinates?: TrechoCoordinates | null; 
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (trechoCoordinates && trechoCoordinates.coordinates && trechoCoordinates.coordinates.length > 0) {
+      // Se há trecho selecionado, ajusta para mostrar todo o trecho + localização do usuário
+      const bounds = new LatLngBounds([]);
+      
+      // Adiciona pontos do trecho
+      trechoCoordinates.coordinates.forEach(coord => {
+        bounds.extend([coord.lat, coord.lng]);
+      });
+      
+      // Adiciona localização do usuário se existir
+      if (userLocation) {
+        bounds.extend(userLocation);
+      }
+      
+      // Ajusta o mapa para mostrar todos os pontos
+      map.fitBounds(bounds, { padding: [20, 20] });
+    } else if (userLocation) {
+      // Se apenas tem localização do usuário, centraliza nela
+      map.setView(userLocation, 16);
+    }
+  }, [map, userLocation, trechoCoordinates]);
+
+  return null;
+}
+
+export function MapView({ 
+  center, 
+  userLocation, 
+  trechoCoordinates,
+  className = "" 
+}: MapViewProps) {
+  // Fix para ícones do Leaflet no Next.js
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Tipagem específica para o prototype do Icon Default
+      interface IconDefaultPrototype extends Icon.Default {
+        _getIconUrl?: () => string;
+      }
+      
+      delete (Icon.Default.prototype as IconDefaultPrototype)._getIconUrl;
+      Icon.Default.mergeOptions({
+        iconRetinaUrl: '/leaflet/marker-icon-2x.png',
+        iconUrl: '/leaflet/marker-icon.png',
+        shadowUrl: '/leaflet/marker-shadow.png',
+      });
+    }
+  }, []);
+
+  return (
+    <div id="mapa-section" className={`bg-white rounded-xl shadow-lg overflow-hidden ${className}`}>
+      <div className="p-4 bg-gradient-to-r from-accent to-gradient-end">
+        <h3 className="text-lg font-semibold text-white">
+          Localização e Trecho
+        </h3>
+      </div>
+      
+      <div className="h-96 w-full">
+        <MapContainer 
+          center={center} 
+          zoom={15} 
+          className="h-full w-full"
+          zoomControl={true}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          {/* Controlador para ajuste automático do mapa */}
+          <MapController 
+            userLocation={userLocation}
+            trechoCoordinates={trechoCoordinates}
+          />
+          
+          {/* Marcador da localização do usuário */}
+          {userLocation && (
+            <Marker position={userLocation} icon={userLocationIcon}>
+              <Popup>
+                <div className="text-center">
+                  <strong>Sua Localização</strong>
+                  <br />
+                  <small>
+                    {userLocation[0].toFixed(6)}, {userLocation[1].toFixed(6)}
+                  </small>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+
+          {/* Linha do trecho */}
+          {trechoCoordinates && trechoCoordinates.coordinates && trechoCoordinates.coordinates.length > 1 && (
+            <>
+              <Polyline
+                positions={trechoCoordinates.coordinates.map(coord => [coord.lat, coord.lng] as LatLngTuple)}
+                color="#00ADB5"
+                weight={4}
+                opacity={0.8}
+              />
+              
+              {/* Marcadores de início e fim do trecho */}
+              <Marker 
+                position={[trechoCoordinates.coordinates[0].lat, trechoCoordinates.coordinates[0].lng]} 
+                icon={trechoIcon}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <strong>Início do Trecho</strong>
+                    <br />
+                    <small>Cata-Bagulho</small>
+                  </div>
+                </Popup>
+              </Marker>
+              
+              <Marker 
+                position={[
+                  trechoCoordinates.coordinates[trechoCoordinates.coordinates.length - 1].lat,
+                  trechoCoordinates.coordinates[trechoCoordinates.coordinates.length - 1].lng
+                ]} 
+                icon={trechoIcon}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <strong>Fim do Trecho</strong>
+                    <br />
+                    <small>Cata-Bagulho</small>
+                  </div>
+                </Popup>
+              </Marker>
+            </>
+          )}
+        </MapContainer>
+      </div>
+      
+      {trechoCoordinates && (
+        <div className="p-3 bg-gray-50 border-t">
+          <p className="text-xs text-gray-600 text-center">
+            Trecho: {trechoCoordinates.cd_mapa} • 
+            {trechoCoordinates.coordinates.length} pontos de coordenadas
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
