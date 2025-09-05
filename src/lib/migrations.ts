@@ -32,10 +32,15 @@ async function getExecutedMigrations(): Promise<string[]> {
     const result = await db.query(
       "SELECT filename FROM migrations ORDER BY id",
     );
-    return result.rows.map((row) => (row as {filename: string}).filename);
+    return result.rows.map((row) => (row as { filename: string }).filename);
   } catch (error) {
     // Se a tabela não existir ainda
-    if (error && typeof error === 'object' && 'code' in error && error.code === "42P01") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "42P01"
+    ) {
       console.log("📋 Tabela de migrações ainda não existe");
       return [];
     }

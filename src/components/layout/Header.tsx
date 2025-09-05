@@ -4,37 +4,46 @@ import { LinkButton } from "../ui/LinkButton";
 
 export function Header() {
   return (
-    <header className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <header className="bg-surface/95 backdrop-blur-sm shadow-sm border-b border-default sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 max-w-7xl">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 bg-gradient-to-br from-accent to-gradient-end rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-gray-800" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19 21V9.5L12 4.5L5 9.5V21H8V14H16V21H19ZM21 21V10L12 3L3 10V21H10V16H14V21H21Z"/>
-                <rect x="7" y="11" width="2" height="2"/>
-                <rect x="10" y="11" width="2" height="2"/>
-                <rect x="15" y="11" width="2" height="2"/>
-                <rect x="7" y="8" width="2" height="2"/>
-                <rect x="10" y="8" width="2" height="2"/>
-                <rect x="15" y="8" width="2" height="2"/>
+          <Link
+            href="/"
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+          >
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-accent to-primary-hover rounded-lg flex items-center justify-center">
+              <svg
+                className="w-6 h-6 text-white"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M19 21V9.5L12 4.5L5 9.5V21H8V14H16V21H19ZM21 21V10L12 3L3 10V21H10V16H14V21H21Z" />
+                <rect x="7" y="11" width="2" height="2" />
+                <rect x="10" y="11" width="2" height="2" />
+                <rect x="15" y="11" width="2" height="2" />
+                <rect x="7" y="8" width="2" height="2" />
+                <rect x="10" y="8" width="2" height="2" />
+                <rect x="15" y="8" width="2" height="2" />
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-dark-primary">Procura SP</h1>
-              <p className="text-xs text-gray-600 -mt-1">Serviços Públicos</p>
+              <h1 className="text-2xl font-bold text-primary">
+                Procura SP
+              </h1>
+              <p className="text-xs text-secondary -mt-1">Serviços Públicos</p>
             </div>
           </Link>
-          
+
           <nav className="hidden md:flex items-center space-x-6">
-            <Link 
-              href="/servicos" 
-              className="text-dark-secondary hover:text-accent transition-colors duration-200 font-medium"
+            <Link
+              href="/servicos"
+              className="text-secondary hover:text-primary-accent transition-colors duration-200 font-medium"
             >
               Serviços
             </Link>
-            <Link 
-              href="/sobre" 
-              className="text-dark-secondary hover:text-accent transition-colors duration-200 font-medium"
+            <Link
+              href="/sobre"
+              className="text-secondary hover:text-primary-accent transition-colors duration-200 font-medium"
             >
               Sobre
             </Link>
@@ -44,9 +53,19 @@ export function Header() {
           </nav>
 
           {/* Menu mobile */}
-          <button className="md:hidden p-2 text-dark-secondary hover:text-accent transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          <button className="md:hidden p-2 text-secondary hover:text-primary-accent transition-colors">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
             </svg>
           </button>
         </div>

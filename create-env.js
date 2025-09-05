@@ -4,8 +4,8 @@
  * Usage: node create-env.js
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 const envContent = `# Configurações para desenvolvimento Docker
 NODE_ENV=development
@@ -23,21 +23,23 @@ BACKEND_PORT=3000
 # Frontend
 NEXT_PUBLIC_API_URL=http://localhost:3000/api`;
 
-const envPath = path.join(__dirname, '.env.development');
+const envPath = path.join(__dirname, ".env.development");
 
 if (fs.existsSync(envPath)) {
-  console.log('⚠️  Arquivo .env.development já existe. Não será sobrescrito.');
+  console.log("⚠️  Arquivo .env.development já existe. Não será sobrescrito.");
 } else {
   fs.writeFileSync(envPath, envContent);
-  console.log('✅ Arquivo .env.development criado com sucesso!');
-  console.log('📁 Localização:', envPath);
+  console.log("✅ Arquivo .env.development criado com sucesso!");
+  console.log("📁 Localização:", envPath);
 }
 
-console.log('');
-console.log('📋 Próximos passos:');
-console.log('   1. npm run docker:up');
-console.log('   2. Aguardar 10 segundos para o banco subir');
-console.log('   3. npm run dev');
+console.log("");
+console.log("📋 Próximos passos:");
+console.log("   1. npm run docker:up");
+console.log("   2. Aguardar 10 segundos para o banco subir");
+console.log("   3. npm run dev");
 
-console.log('');
-console.log('🔒 SEGURANÇA: Este arquivo não será commitado (protegido pelo .gitignore)');
+console.log("");
+console.log(
+  "🔒 SEGURANÇA: Este arquivo não será commitado (protegido pelo .gitignore)",
+);

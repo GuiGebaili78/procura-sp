@@ -59,7 +59,7 @@ const exclusions: RegExp = new RegExp(`(${exclusionList.join("|")})`);
 // Define o nome do arquivo de saída
 const outputFile: string = path.join(
   rootPath,
-  "estrutura_e_scripts_completa.txt"
+  "estrutura_e_scripts_completa.txt",
 );
 
 // Função para obter a linguagem para o bloco de código Markdown
@@ -99,7 +99,7 @@ function getLanguage(filename: string, relativePath: string): string {
 fs.writeFileSync(
   outputFile,
   "Estrutura de pastas e arquivos com conteúdo:\r\n",
-  { encoding: "utf8" }
+  { encoding: "utf8" },
 );
 
 // Função recursiva para percorrer diretórios
@@ -187,7 +187,7 @@ function processDirectory(dirPath: string, depth: number): void {
           // Usamos 'any' para o tipo de erro para compatibilidade
           // Loga o erro no console e no arquivo de saída
           console.error(
-            `Erro ao ler o conteúdo do arquivo '${relativePath}': ${error.message}`
+            `Erro ao ler o conteúdo do arquivo '${relativePath}': ${error.message}`,
           );
           fs.appendFileSync(outputFile, `\`\`\`plaintext\r\n`, {
             encoding: "utf8",
@@ -195,7 +195,7 @@ function processDirectory(dirPath: string, depth: number): void {
           fs.appendFileSync(
             outputFile,
             `Erro ao ler o conteúdo do arquivo '${relativePath}': ${error.message}\r\n`,
-            { encoding: "utf8" }
+            { encoding: "utf8" },
           );
           fs.appendFileSync(outputFile, "```\r\n", { encoding: "utf8" });
         }

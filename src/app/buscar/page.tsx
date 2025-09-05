@@ -11,43 +11,57 @@ import { fetchTrechoCoordinates } from "../../services/trechoService";
 import { Card } from "../../components/ui/Card";
 
 // Dynamic import do mapa para evitar problemas de SSR
-const MapView = dynamic(() => import("../../components/map/MapView").then(mod => ({ default: mod.MapView })), {
-  ssr: false,
-  loading: () => (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      <div className="p-4 bg-gradient-to-r from-accent to-gradient-end">
-        <h3 className="text-lg font-semibold text-white">
-          Localização e Trecho
-        </h3>
+const MapView = dynamic(
+  () =>
+    import("../../components/map/MapView").then((mod) => ({
+      default: mod.MapView,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="p-4 bg-gradient-to-r from-accent to-gradient-end">
+          <h3 className="text-lg font-semibold text-white">
+            Localização e Trecho
+          </h3>
+        </div>
+        <div className="h-96 w-full flex items-center justify-center bg-gray-100">
+          <div className="spinner w-8 h-8"></div>
+        </div>
       </div>
-      <div className="h-96 w-full flex items-center justify-center bg-gray-100">
-        <div className="spinner w-8 h-8"></div>
-      </div>
-    </div>
-  ),
-});
+    ),
+  },
+);
 
 export default function BuscarPage() {
   const [searchResults, setSearchResults] = useState<CataBagulhoResult[]>([]);
-  const [userCoordinates, setUserCoordinates] = useState<{ lat: number; lng: number } | null>(null);
-  const [trechoCoordinates, setTrechoCoordinates] = useState<TrechoCoordinates | null>(null);
+  const [userCoordinates, setUserCoordinates] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [trechoCoordinates, setTrechoCoordinates] =
+    useState<TrechoCoordinates | null>(null);
   const [error, setError] = useState<string>("");
   const [loadingTrecho, setLoadingTrecho] = useState(false);
-  const [selectedService, setSelectedService] = useState<string>("cata-bagulho");
+  const [selectedService, setSelectedService] =
+    useState<string>("cata-bagulho");
 
-  const handleSearchResults = (results: CataBagulhoResult[], coordinates: { lat: number; lng: number }) => {
+  const handleSearchResults = (
+    results: CataBagulhoResult[],
+    coordinates: { lat: number; lng: number },
+  ) => {
     setSearchResults(results);
     setUserCoordinates(coordinates);
     setTrechoCoordinates(null); // Limpa trecho anterior
     setError("");
-    
+
     // Auto-scroll para os resultados
     setTimeout(() => {
-      const resultsSection = document.getElementById('resultados-section');
+      const resultsSection = document.getElementById("resultados-section");
       if (resultsSection) {
-        resultsSection.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'start'
+        resultsSection.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
         });
       }
     }, 100);
@@ -66,7 +80,8 @@ export default function BuscarPage() {
       setTrechoCoordinates(trecho);
       setError("");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao carregar trecho";
+      const message =
+        error instanceof Error ? error.message : "Erro ao carregar trecho";
       setError(`Erro ao carregar trecho: ${message}`);
       setTrechoCoordinates(null);
     } finally {
@@ -107,7 +122,10 @@ export default function BuscarPage() {
           onError={handleError}
         />
 
-        <div id="resultados-section" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div
+          id="resultados-section"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+        >
           {/* Coluna dos Resultados */}
           <div className="space-y-6">
             {searchResults.length > 0 && (
@@ -129,7 +147,8 @@ export default function BuscarPage() {
                   Faça uma busca
                 </h3>
                 <p className="text-gray-600">
-                  Digite seu CEP e número para encontrar serviços de Cata-Bagulho na sua região.
+                  Digite seu CEP e número para encontrar serviços de
+                  Cata-Bagulho na sua região.
                 </p>
               </Card>
             )}
@@ -143,11 +162,13 @@ export default function BuscarPage() {
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <div className="flex items-center">
                       <div className="spinner w-4 h-4 mr-3"></div>
-                      <p className="text-blue-700 font-medium">Carregando trecho...</p>
+                      <p className="text-blue-700 font-medium">
+                        Carregando trecho...
+                      </p>
                     </div>
                   </div>
                 )}
-                
+
                 <MapView
                   center={[userCoordinates.lat, userCoordinates.lng]}
                   userLocation={[userCoordinates.lat, userCoordinates.lng]}

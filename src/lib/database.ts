@@ -6,7 +6,7 @@ import path from "path";
 function getEnvironmentConfig() {
   const isProduction = process.env.NODE_ENV === "production";
   const isVercel = process.env.VERCEL === "1";
-  
+
   if (isProduction || isVercel) {
     // Produção: Vercel + Neon
     console.log("🌍 Ambiente: PRODUÇÃO (Vercel + Neon)");
@@ -16,12 +16,12 @@ function getEnvironmentConfig() {
       user: process.env.NEON_USER,
       database: process.env.NEON_DATABASE,
       password: process.env.NEON_PASSWORD,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false },
     };
   } else {
     // Desenvolvimento: Docker
     console.log("🌍 Ambiente: DESENVOLVIMENTO (Docker)");
-    
+
     // Carregar variáveis de ambiente para desenvolvimento
     dotenv.config({
       path: path.resolve(process.cwd(), ".env.development"),
@@ -33,7 +33,7 @@ function getEnvironmentConfig() {
       user: process.env.POSTGRES_USER || "procura_sp_user",
       database: process.env.POSTGRES_DB || "procura_sp_db",
       password: process.env.POSTGRES_PASSWORD || "procura_sp_password",
-      ssl: false
+      ssl: false,
     };
   }
 }
@@ -43,7 +43,7 @@ const pool = new Pool(dbConfig);
 
 async function query(
   queryObject: string,
-  params: unknown[] = []
+  params: unknown[] = [],
 ): Promise<QueryResult<QueryResultRow>> {
   try {
     const result = await pool.query(queryObject, params);

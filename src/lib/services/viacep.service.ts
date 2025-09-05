@@ -1,19 +1,19 @@
-import axios from 'axios';
-import db from '../database';
-import { ViaCepResponse } from '../types/api';
+import axios from "axios";
+import db from "../database";
+import { ViaCepResponse } from "../types/api";
 
 export class ViaCepService {
   private readonly cacheTTLHours = 24;
 
   private normalizeCep(cep: string): string {
-    return cep.replace(/\D/g, '');
+    return cep.replace(/\D/g, "");
   }
 
   async buscarEnderecoPorCep(cep: string): Promise<ViaCepResponse> {
     const normalizedCep = this.normalizeCep(cep);
-    
+
     if (normalizedCep.length !== 8) {
-      throw new Error('CEP deve conter exatamente 8 dígitos');
+      throw new Error("CEP deve conter exatamente 8 dígitos");
     }
 
     // 1. Tenta buscar do cache
@@ -52,7 +52,7 @@ export class ViaCepService {
 
       return null;
     } catch (error) {
-      console.error('Erro ao buscar CEP no cache:', error);
+      console.error("Erro ao buscar CEP no cache:", error);
       return null;
     }
   }
@@ -64,27 +64,32 @@ export class ViaCepService {
       const { data } = await axios.get<ViaCepResponse>(url, {
         timeout: 10000,
         headers: {
-          'User-Agent': 'Procura-SP/1.0.0',
+          "User-Agent": "Procura-SP/1.0.0",
         },
       });
 
-      if ('erro' in data) {
-        throw new Error('CEP não encontrado');
+      if ("erro" in data) {
+        throw new Error("CEP não encontrado");
       }
 
       return data;
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
-          throw new Error('CEP não encontrado');
+          throw new Error("CEP não encontrado");
         }
-        throw new Error('Falha na conexão com o serviço de CEP');
+        throw new Error("Falha na conexão com o serviço de CEP");
       }
-      throw new Error(error instanceof Error ? error.message : 'Erro ao buscar CEP');
+      throw new Error(
+        error instanceof Error ? error.message : "Erro ao buscar CEP",
+      );
     }
   }
 
-  private async saveCachedCep(cep: string, data: ViaCepResponse): Promise<void> {
+  private async saveCachedCep(
+    cep: string,
+    data: ViaCepResponse,
+  ): Promise<void> {
     try {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + this.cacheTTLHours);
@@ -111,17 +116,17 @@ export class ViaCepService {
 
       await db.query(query, [
         formattedCep,
-        data.logradouro || '',
-        data.unidade || '',
-        data.bairro || '',
-        data.localidade || '',
-        data.uf || '',
+        data.logradouro || "",
+        data.unidade || "",
+        data.bairro || "",
+        data.localidade || "",
+        data.uf || "",
         expiresAt,
       ]);
 
       console.log(`💾 [ViaCEP] CEP ${formattedCep} salvo no cache`);
     } catch (error) {
-      console.error('Erro ao salvar CEP no cache:', error);
+      console.error("Erro ao salvar CEP no cache:", error);
     }
   }
 

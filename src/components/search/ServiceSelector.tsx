@@ -12,7 +12,10 @@ export function ServiceSelector({
   return (
     <div className="space-y-4">
       <div>
-        <label htmlFor="service" className="block text-sm font-medium text-dark-primary mb-2">
+        <label
+          htmlFor="service"
+          className="block text-sm font-medium text-dark-primary mb-2"
+        >
           🔍 Tipo de serviço
         </label>
         <select
@@ -34,7 +37,8 @@ export function ServiceSelector({
         <div className="text-sm text-gray-600">
           <div>
             <p className="mb-2">
-              <strong>Cata-Bagulho:</strong> Coleta de móveis velhos, eletrodomésticos e objetos grandes.
+              <strong>Cata-Bagulho:</strong> Coleta de móveis velhos,
+              eletrodomésticos e objetos grandes.
             </p>
             <ul className="list-disc list-inside space-y-1">
               <li>Agendamento necessário</li>

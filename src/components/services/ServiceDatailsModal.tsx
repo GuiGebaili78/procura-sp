@@ -40,12 +40,14 @@ export function ServiceDetailsModal({
               </h3>
               {result.startStretch && (
                 <p className="text-blue-800 mb-1">
-                  <span className="font-medium">Trecho inicial:</span> {result.startStretch}
+                  <span className="font-medium">Trecho inicial:</span>{" "}
+                  {result.startStretch}
                 </p>
               )}
               {result.endStretch && (
                 <p className="text-blue-800">
-                  <span className="font-medium">Trecho final:</span> {result.endStretch}
+                  <span className="font-medium">Trecho final:</span>{" "}
+                  {result.endStretch}
                 </p>
               )}
             </div>
@@ -59,15 +61,23 @@ export function ServiceDetailsModal({
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="font-medium text-gray-700">Horário:</span>
-                    <p className="text-gray-600">{result.schedule || "Não informado"}</p>
+                    <p className="text-gray-600">
+                      {result.schedule || "Não informado"}
+                    </p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Turno:</span>
-                    <p className="text-gray-600">{result.shift || "Não informado"}</p>
+                    <p className="text-gray-600">
+                      {result.shift || "Não informado"}
+                    </p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Frequência:</span>
-                    <p className="text-gray-600">{result.frequency || "Não informada"}</p>
+                    <span className="font-medium text-gray-700">
+                      Frequência:
+                    </span>
+                    <p className="text-gray-600">
+                      {result.frequency || "Não informada"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -79,12 +89,17 @@ export function ServiceDetailsModal({
                 <div className="space-y-1 text-sm">
                   {result.dates && result.dates.length > 0 ? (
                     result.dates.map((date, index) => (
-                      <div key={index} className="bg-white rounded p-2 text-gray-700">
+                      <div
+                        key={index}
+                        className="bg-white rounded p-2 text-gray-700"
+                      >
                         {date}
                       </div>
                     ))
                   ) : (
-                    <p className="text-gray-600 italic">Nenhuma data específica informada</p>
+                    <p className="text-gray-600 italic">
+                      Nenhuma data específica informada
+                    </p>
                   )}
                 </div>
               </div>
@@ -106,11 +121,16 @@ export function ServiceDetailsModal({
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Horários podem variar devido a condições climáticas ou operacionais</span>
+                  <span>
+                    Horários podem variar devido a condições climáticas ou
+                    operacionais
+                  </span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Em caso de dúvidas, entre em contato com a prefeitura</span>
+                  <span>
+                    Em caso de dúvidas, entre em contato com a prefeitura
+                  </span>
                 </li>
               </ul>
             </div>
@@ -123,16 +143,18 @@ export function ServiceDetailsModal({
                 </h4>
                 <div className="text-sm text-green-700 space-y-2">
                   <p>
-                    <strong>Itens aceitos:</strong> Móveis velhos, eletrodomésticos, colchões, 
-                    sofás, geladeiras, fogões, televisores, computadores e outros objetos grandes.
+                    <strong>Itens aceitos:</strong> Móveis velhos,
+                    eletrodomésticos, colchões, sofás, geladeiras, fogões,
+                    televisores, computadores e outros objetos grandes.
                   </p>
                   <p>
-                    <strong>Não aceitos:</strong> Lixo comum, materiais de construção, 
-                    produtos químicos, lixo hospitalar ou materiais perigosos.
+                    <strong>Não aceitos:</strong> Lixo comum, materiais de
+                    construção, produtos químicos, lixo hospitalar ou materiais
+                    perigosos.
                   </p>
                   <p>
-                    <strong>Contato:</strong> Para mais informações, ligue 156 ou acesse o 
-                    site oficial da Prefeitura de São Paulo.
+                    <strong>Contato:</strong> Para mais informações, ligue 156
+                    ou acesse o site oficial da Prefeitura de São Paulo.
                   </p>
                 </div>
               </div>

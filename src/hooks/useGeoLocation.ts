@@ -41,7 +41,7 @@ export function useGeoLocation(enable = true) {
       (err) => {
         setState({ coords: null, error: err.message, loading: false });
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
 
     return () => {

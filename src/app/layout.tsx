@@ -15,12 +15,14 @@ export default function RootLayout({
     <html lang="pt-BR">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="antialiased font-roboto">
-        <div className="min-h-screen main-gradient">
-          {children}
-        </div>
+        <div className="min-h-screen main-gradient">{children}</div>
       </body>
     </html>
   );

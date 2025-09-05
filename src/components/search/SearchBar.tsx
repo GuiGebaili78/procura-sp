@@ -12,7 +12,10 @@ import { formatCep } from "../../utils/validators";
 import { CataBagulhoResult } from "../../types/cataBagulho";
 
 interface SearchBarProps {
-  onSearchResults: (results: CataBagulhoResult[], coordinates: { lat: number; lng: number }) => void;
+  onSearchResults: (
+    results: CataBagulhoResult[],
+    coordinates: { lat: number; lng: number },
+  ) => void;
   onError: (error: string) => void;
 }
 
@@ -28,19 +31,19 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
   const [loading, setLoading] = useState(false);
   const [cepError, setCepError] = useState("");
   const [noResultsMessage, setNoResultsMessage] = useState("");
-  
+
   const numeroInputRef = useRef<HTMLInputElement>(null);
 
   const handleCepChange = async (value: string) => {
     const formatted = formatCep(value);
     setCep(formatted);
     setCepError(""); // Limpa erro anterior
-    
+
     // Limpa o número quando CEP é alterado
     if (formatted.replace(/\D/g, "").length < 8) {
       setNumero("");
     }
-    
+
     // Auto-busca quando CEP estiver completo
     if (formatted.replace(/\D/g, "").length === 8) {
       try {
@@ -51,7 +54,7 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
           localidade: cepData.localidade,
           uf: cepData.uf,
         });
-        
+
         // Limpa o número e move foco para o campo número
         setNumero("");
         setTimeout(() => {
@@ -59,9 +62,10 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
         }, 100);
       } catch (error) {
         console.error("Erro ao buscar CEP:", error);
-        const errorMessage = error instanceof Error ? error.message : "CEP não encontrado";
+        const errorMessage =
+          error instanceof Error ? error.message : "CEP não encontrado";
         setCepError(errorMessage);
-        
+
         // Limpa endereço e número quando CEP é inválido
         setEndereco({
           logradouro: "",
@@ -90,19 +94,19 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
 
     setLoading(true);
     setNoResultsMessage(""); // Limpa mensagem anterior
-    
+
     try {
       // Tenta diferentes formatos de endereço para melhorar as chances de sucesso
       const enderecoFormats = [
         `${endereco.logradouro}, ${numero}, ${endereco.bairro}, ${endereco.localidade}, ${endereco.uf}, Brasil`,
         `${endereco.logradouro}, ${endereco.bairro}, ${endereco.localidade}, SP, Brasil`,
         `${endereco.logradouro}, ${endereco.localidade}, São Paulo, Brasil`,
-        `${endereco.bairro}, ${endereco.localidade}, SP, Brasil`
+        `${endereco.bairro}, ${endereco.localidade}, SP, Brasil`,
       ];
-      
+
       let geocodeResults = null;
       let enderecoUsado = "";
-      
+
       // Tenta cada formato até encontrar um resultado
       for (const formato of enderecoFormats) {
         console.log("Tentando geocodificar:", formato);
@@ -117,29 +121,34 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
           console.warn("Formato falhou:", formato, err);
         }
       }
-      
+
       if (!geocodeResults || geocodeResults.length === 0) {
-        throw new Error("Não foi possível encontrar as coordenadas do endereço. Verifique se o CEP e número estão corretos.");
+        throw new Error(
+          "Não foi possível encontrar as coordenadas do endereço. Verifique se o CEP e número estão corretos.",
+        );
       }
-      
+
       console.log("Sucesso com formato:", enderecoUsado);
 
       const { lat, lon } = geocodeResults[0];
       const coordinates = { lat: parseFloat(lat), lng: parseFloat(lon) };
-      
+
       console.log("Coordenadas obtidas:", coordinates);
 
       // Busca serviços de Cata-Bagulho
       const results = await searchCataBagulho(coordinates.lat, coordinates.lng);
-      
+
       if (!results || results.length === 0) {
-        setNoResultsMessage("Nenhum serviço de Cata-Bagulho encontrado para este endereço.");
+        setNoResultsMessage(
+          "Nenhum serviço de Cata-Bagulho encontrado para este endereço.",
+        );
         return;
       }
 
       onSearchResults(results, coordinates);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao buscar serviços";
+      const message =
+        error instanceof Error ? error.message : "Erro ao buscar serviços";
       console.error("Erro na busca:", error);
       onError(message);
     } finally {
@@ -155,10 +164,10 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
 
   return (
     <Card padding="md" className="mb-6">
-      <h2 className="text-2xl font-bold text-dark-primary mb-6">
+      <h2 className="text-2xl font-bold text-primary mb-6">
         Buscar Cata-Bagulho
       </h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <Input
@@ -172,7 +181,7 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
             helperText="Digite o CEP para buscar o endereço automaticamente"
           />
         </div>
-        
+
         <div>
           <Input
             ref={numeroInputRef}
@@ -240,13 +249,14 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
       </Button>
 
       {noResultsMessage && (
-        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+        <div className="mt-4 p-4 bg-warning-light border border-warning rounded-lg">
           <div className="flex items-center">
-            <div className="text-orange-600 mr-3">📍</div>
-            <p className="text-orange-700 font-medium">{noResultsMessage}</p>
+            <div className="text-warning mr-3">📍</div>
+            <p className="text-warning font-medium">{noResultsMessage}</p>
           </div>
-          <p className="text-orange-600 text-sm mt-2">
-            Tente verificar se o endereço está correto ou procure um endereço próximo.
+          <p className="text-warning text-sm mt-2">
+            Tente verificar se o endereço está correto ou procure um endereço
+            próximo.
           </p>
         </div>
       )}
