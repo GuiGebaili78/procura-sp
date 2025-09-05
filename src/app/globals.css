@@ -1,65 +1,109 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/*
+  SISTEMA DE CORES PROCURA SP - TAILWIND 4
+  ========================================
+  Todas as cores em HSL para máxima compatibilidade e suporte à opacidade
+*/
 :root {
-  /* Background Colors */
-  --background: 0 0% 100%;
-  --foreground: 0 0% 3.9%;
-  --surface: 255 255 255;
-  --surface-secondary: 249 250 251;
-  --surface-accent: 239 246 255;
+  /* === CORES BASE === */
+  --background: 0 0% 100%;           /* #ffffff */
+  --foreground: 222 47% 11%;         /* #111827 */
+  --muted: 240 5% 96%;               /* #f3f4f6 */
+  --muted-foreground: 215 16% 47%;   /* #6b7280 */
   
-  /* Primary Colors (Procura SP Brand) */
-  --primary: 14 61 66;        /* #0e3d42 */
-  --primary-light: 38 96 104; /* #266068 */
-  --primary-accent: 89 150 158; /* #59969e */
-  --primary-hover: 69 158 149; /* #459e95 */
+  /* === CORES PRIMÁRIAS (Marca Procura SP) === */
+  --primary: 186 76% 15%;            /* #0e3d42 - Verde escuro principal */
+  --primary-foreground: 0 0% 100%;   /* #ffffff */
+  --primary-light: 187 61% 25%;      /* #266068 */
+  --primary-accent: 186 28% 48%;     /* #59969e */
+  --primary-hover: 174 39% 45%;      /* #459e95 */
   
-  /* Secondary Colors */
-  --secondary: 0 173 181;     /* #00adb5 */
-  --secondary-hover: 0 138 145; /* #008a91 
-  /* Text Colors */
-  --text-primary: 17 24 39;   /* #111827 - gray-900 */
-  --text-secondary: 75 85 99; /* #4b5563 - gray-600 */
-  --text-muted: 156 163 175;  /* #9ca3af - gray-400 */
-  --text-white: 255 255 255;
+  /* === CORES SECUNDÁRIAS === */
+  --secondary: 183 100% 36%;         /* #00adb5 - Azul turquesa */
+  --secondary-foreground: 0 0% 100%; /* #ffffff */
+  --secondary-hover: 183 100% 28%;   /* #008a91 */
+  --secondary-light: 183 100% 85%;   /* #b3f0f2 */
   
-  /* Status Colors */
-  --success: 34 197 94;       /* #22c55e */
-  --success-light: 220 252 231; /* #dcfce7 */
-  --warning: 245 158 11;      /* #f59e0b */
-  --warning-light: 254 243 199; /* #fef3c7 */
-  --error: 239 68 68;         /* #ef4444 */
-  --error-light: 254 226 226; /* #fee2e2 */
-  --info: 59 130 246;         /* #3b82f6 */
-  --info-light: 219 234 254;  /* #dbeafe */
+  /* === CORES DE GRADIENTE === */
+  --gradient-start: 186 76% 15%;     /* --primary */
+  --gradient-mid: 187 61% 25%;       /* --primary-light */
+  --gradient-end: 183 100% 36%;      /* --secondary */
+  --gradient-accent: 174 39% 45%;    /* --primary-hover */
   
-  /* Border Colors */
-  --border: 209 213 219;      /* #d1d5db - gray-300 */
-  --border-light: 243 244 246; /* #f3f4f6 - gray-100 */
-  --border-focus: 59 130 246; /* #3b82f6 - blue-500 */
+  /* === CORES DE STATUS === */
+  --success: 145 63% 49%;            /* #22c55e */
+  --success-foreground: 0 0% 100%;   /* #ffffff */
+  --success-light: 145 63% 95%;      /* #f0fdf4 */
   
-  /* Shadow Colors */
-  --shadow: 0 0 0;
-  --shadow-light: 0 0 0;
+  --warning: 38 92% 50%;             /* #f59e0b */
+  --warning-foreground: 0 0% 100%;   /* #ffffff */
+  --warning-light: 38 92% 95%;       /* #fffbeb */
+  
+  --error: 0 84% 60%;                /* #ef4444 */
+  --error-foreground: 0 0% 100%;     /* #ffffff */
+  --error-light: 0 84% 95%;          /* #fef2f2 */
+  
+  --info: 217 91% 60%;               /* #3b82f6 */
+  --info-foreground: 0 0% 100%;      /* #ffffff */
+  --info-light: 217 91% 95%;         /* #eff6ff */
+  
+  /* === CORES DE INTERFACE === */
+  --border: 215 20% 90%;             /* #e5e7eb - Mais sutil */
+  --border-input: 215 20% 85%;       /* #d1d5db */
+  --border-focus: 217 91% 60%;       /* #3b82f6 */
+  
+  --card: 0 0% 100%;                 /* #ffffff */
+  --card-foreground: 222 47% 11%;    /* #111827 */
+  
+  --popover: 0 0% 100%;              /* #ffffff */
+  --popover-foreground: 222 47% 11%; /* #111827 */
+  
+  /* === CORES DE TEXTO === */
+  --text-primary: 222 47% 11%;       /* #111827 */
+  --text-secondary: 215 16% 47%;     /* #6b7280 */
+  --text-muted: 215 20% 65%;         /* #9ca3af */
+  
+  /* === OUTRAS VARIÁVEIS === */
+  --radius: 0.5rem;
+  --ring: 217 91% 60%;               /* Para focus rings */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --surface: 31 41 55;
-    --surface-secondary: 17 24 39;
-    --surface-accent: 30 41 59;
-    --text-primary: 243 244 246;
-    --text-secondary: 156 163 175;
-    --text-muted: 107 114 128;
-    --border: 55 65 81;
-    --border-light: 75 85 99;
-  }
+/*
+  TEMA ESCURO
+  ===========
+*/
+.dark {
+  --background: 222 47% 11%;         /* #111827 */
+  --foreground: 210 40% 98%;         /* #f8fafc */
+  --muted: 224 30% 15%;              /* #1f2937 */
+  --muted-foreground: 215 20% 65%;   /* #9ca3af */
+  
+  --card: 224 30% 15%;               /* #1f2937 */
+  --card-foreground: 210 40% 98%;    /* #f8fafc */
+  
+  --popover: 224 30% 15%;            /* #1f2937 */
+  --popover-foreground: 210 40% 98%; /* #f8fafc */
+  
+  --border: 215 14% 34%;             /* #4b5563 */
+  --border-input: 215 14% 28%;       /* #374151 */
+  --border-focus: 217 91% 60%;       /* #3b82f6 */
+  
+  --text-primary: 210 40% 98%;       /* #f8fafc */
+  --text-secondary: 215 20% 65%;     /* #9ca3af */
+  --text-muted: 215 14% 34%;         /* #4b5563 */
 }
 
-* {
+/*
+  ESTILOS GLOBAIS E RESETS
+  -------------------------
+*/
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -68,157 +112,134 @@ html {
 }
 
 body {
-  color: rgb(var(--foreground));
-  background: var(--background);
-  font-family:
-    "Roboto",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "Oxygen",
-    "Ubuntu",
-    "Cantarell",
-    sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Oxygen",
+    "Ubuntu", "Cantarell", sans-serif;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Gradiente para o main */
-.main-gradient {
-  background: linear-gradient(
-    to bottom,
-    #0e3d42 0%,
-    #266068 25%,
-    #59969e 50%,
-    #94c5cd 75%,
-    #459e95 100%
-  );
-  min-height: 100vh;
-}
-
-/* Classes de cores customizadas do projeto (Procura SP) */
-.bg-accent { background-color: #00adb5; }
-.hover\:bg-accent:hover { background-color: #008a91; }
-.text-accent { color: #00adb5; }
-.border-accent { border-color: #00adb5; }
-
-.bg-dark-primary { background-color: #0e3d42; }
-.text-dark-primary { 
-  color: #0e3d42;
-  -webkit-text-fill-color: #0e3d42;
-}
-.text-dark-secondary { 
-  color: #6b7280;
-  -webkit-text-fill-color: #6b7280;
-}
-
-.from-accent { --tw-gradient-from: #00adb5; }
-.to-gradient-end { --tw-gradient-to: #459e95; }
-
-/* Classes de cores centralizadas para customização fácil */
-.bg-surface { background-color: rgb(var(--surface)); }
-.bg-surface-secondary { background-color: rgb(var(--surface-secondary)); }
-.bg-surface-accent { background-color: rgb(var(--surface-accent)); }
-.bg-primary { background-color: rgb(var(--primary)); }
-.bg-secondary { background-color: rgb(var(--secondary)); }
-.bg-secondary-hover { background-color: rgb(var(--secondary-hover)); }
-
-.text-primary { color: rgb(var(--text-primary)); }
-.text-secondary { color: rgb(var(--text-secondary)); }
-.text-muted { color: rgb(var(--text-muted)); }
-
-.border-default { border-color: rgb(var(--border)); }
-.border-light { border-color: rgb(var(--border-light)); }
-.border-focus { border-color: rgb(var(--border-focus)); }
-
-/* Estilos para inputs */
-.input-base {
-  @apply border rounded-lg px-4 py-3 text-base transition-all duration-200 focus:outline-none;
-  border-color: rgb(var(--border));
-  background-color: rgb(var(--surface));
-  color: rgb(var(--text-primary));
+/*
+  COMPONENTES PERSONALIZADOS
+  =========================
+*/
+@layer components {
+  /* === INPUT BASE === */
+  .input-base {
+    @apply w-full rounded-lg border px-4 py-3 text-base transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    @apply placeholder-gray-400;
+    
+    /* Cores usando variáveis CSS */
+    color: hsl(var(--foreground));
+    background-color: hsl(var(--card));
+    border-color: hsl(var(--border-input));
+    
+    /* Fix crítico para inputs escuros em mobile */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
   
-  /* Fix mobile compatibility */
-  -webkit-text-fill-color: #111827;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.input-base:hover {
-  border-color: rgb(var(--text-secondary));
-}
-
-.input-base:focus {
-  border-color: rgb(var(--border-focus));
-  box-shadow: 0 0 0 3px rgba(var(--info), 0.1);
-}
-
-/* Mobile autocomplete fix */
-.input-base:-webkit-autofill {
-  -webkit-text-fill-color: #111827 !important;
-  background-color: #ffffff !important;
-  box-shadow: 0 0 0 30px #ffffff inset !important;
-}
-
-/* Scrollbar personalizada */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgb(var(--surface-secondary));
-  border-radius: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgb(var(--secondary));
-  border-radius: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--secondary-hover));
-}
-
-/* Animações */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+  /* === CORREÇÕES WEBKIT/MOBILE === */
+  .input-base:-webkit-autofill,
+  .input-base:-webkit-autofill:hover,
+  .input-base:-webkit-autofill:focus,
+  .input-base:-webkit-autofill:active {
+    -webkit-text-fill-color: hsl(var(--foreground)) !important;
+    -webkit-box-shadow: 0 0 0 1000px hsl(var(--card)) inset !important;
+    box-shadow: 0 0 0 1000px hsl(var(--card)) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  
+  /* Fix para zoom em iOS */
+  @supports (-webkit-touch-callout: none) {
+    .input-base {
+      font-size: 16px !important;
+    }
+  }
+  
+  /* === GRADIENTES === */
+  .gradient-primary {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary-light)) 35%,
+      hsl(var(--secondary)) 100%
+    );
+  }
+  
+  .gradient-secondary {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--secondary)) 0%,
+      hsl(var(--secondary-hover)) 100%
+    );
+  }
+  
+  .gradient-accent {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary-hover)) 50%,
+      hsl(var(--secondary)) 100%
+    );
+  }
+  
+  /* === CARTÕES === */
+  .card-base {
+    @apply rounded-xl border bg-card text-card-foreground shadow-sm;
+  }
+  
+  .card-hover {
+    @apply card-base hover:shadow-lg transition-all duration-300;
+  }
+  
+  /* === BOTÕES === */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold;
+    @apply transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+  
+  .btn-primary:hover {
+    background-color: hsl(var(--primary-hover));
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold;
+    @apply transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+  }
+  
+  .btn-secondary:hover {
+    background-color: hsl(var(--secondary-hover));
   }
 }
 
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* Todas as cores agora são gerenciadas pelo Tailwind CSS */
-
-/* Melhorias para acessibilidade */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+/*
+  UTILITÁRIOS E ANIMAÇÕES
+  -----------------------
+*/
+@layer utilities {
+  /* Scrollbar personalizada */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
-}
-
-/* Loading spinner */
-.spinner {
-  border: 2px solid rgb(var(--border));
-  border-top: 2px solid rgb(var(--secondary));
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--surface-secondary));
+    border-radius: 4px;
   }
-  100% {
-    transform: rotate(360deg);
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--secondary));
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--secondary-hover));
   }
 }

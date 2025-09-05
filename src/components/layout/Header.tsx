@@ -4,14 +4,14 @@ import { LinkButton } from "../ui/LinkButton";
 
 export function Header() {
   return (
-    <header className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <header className="bg-card/95 backdrop-blur-sm shadow-sm border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 max-w-7xl">
         <div className="flex items-center justify-between">
           <Link
             href="/"
             className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-accent to-gradient-end rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 gradient-secondary rounded-lg flex items-center justify-center">
               <svg
                 className="w-6 h-6 text-dark-primary"
                 fill="currentColor"
@@ -27,10 +27,10 @@ export function Header() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-dark-primary">
+              <h1 className="text-2xl font-bold text-primary">
                 Procura SP
               </h1>
-              <p className="text-xs text-gray-600 -mt-1">Serviços Públicos</p>
+              <p className="text-xs text-text-secondary -mt-1">Serviços Públicos</p>
             </div>
           </Link>
 

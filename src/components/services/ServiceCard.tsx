@@ -106,7 +106,7 @@ export function ServiceCard({ service, onViewTrecho }: ServiceCardProps) {
               {service.dates.map((date, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 p-2 bg-gradient-to-r from-accent/10 to-gradient-end/10 rounded-lg border border-accent/20"
+                  className="flex items-center gap-2 p-2 bg-secondary/10 rounded-lg border border-secondary/20"
                 >
                   <div className="w-2 h-2 bg-accent rounded-full flex-shrink-0"></div>
                   <span className="text-sm text-dark-primary font-medium">

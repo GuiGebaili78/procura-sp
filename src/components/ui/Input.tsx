@@ -14,14 +14,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   ) => {
     const baseClasses = "input-base w-full";
     const errorClasses = error
-      ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+      ? "border-error focus:border-error focus:ring-error/20"
       : "";
-    const variantClasses = variant === "filled" ? "bg-gray-50" : "bg-white";
+    const variantClasses = variant === "filled" ? "bg-muted" : "bg-card";
 
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-dark-primary mb-2">
+          <label className="block text-sm font-medium text-foreground mb-2">
             {label}
           </label>
         )}
@@ -30,9 +30,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           className={`${baseClasses} ${errorClasses} ${variantClasses} ${className}`}
           {...props}
         />
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-1 text-sm text-error">{error}</p>}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{helperText}</p>
         )}
       </div>
     );

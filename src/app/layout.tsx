@@ -27,7 +27,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased font-roboto">
-        <div className="min-h-screen main-gradient">{children}</div>
+        <div className="min-h-screen gradient-primary">{children}</div>
       </body>
     </html>
   );

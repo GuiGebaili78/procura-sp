@@ -105,7 +105,7 @@ export function MapView({
       id="mapa-section"
       className={`bg-white rounded-xl shadow-lg overflow-hidden ${className}`}
     >
-      <div className="p-4 bg-gradient-to-r from-accent to-gradient-end">
+      <div className="p-4 gradient-secondary">
         <h3 className="text-lg font-semibold text-white">
           Localização e Trecho
         </h3>
