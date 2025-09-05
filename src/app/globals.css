@@ -102,8 +102,14 @@ body {
 .border-accent { border-color: #00adb5; }
 
 .bg-dark-primary { background-color: #0e3d42; }
-.text-dark-primary { color: #0e3d42; }
-.text-dark-secondary { color: #6b7280; }
+.text-dark-primary { 
+  color: #0e3d42;
+  -webkit-text-fill-color: #0e3d42;
+}
+.text-dark-secondary { 
+  color: #6b7280;
+  -webkit-text-fill-color: #6b7280;
+}
 
 .from-accent { --tw-gradient-from: #00adb5; }
 .to-gradient-end { --tw-gradient-to: #459e95; }
@@ -130,6 +136,11 @@ body {
   border-color: rgb(var(--border));
   background-color: rgb(var(--surface));
   color: rgb(var(--text-primary));
+  
+  /* Fix mobile compatibility */
+  -webkit-text-fill-color: #111827;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .input-base:hover {
@@ -139,6 +150,13 @@ body {
 .input-base:focus {
   border-color: rgb(var(--border-focus));
   box-shadow: 0 0 0 3px rgba(var(--info), 0.1);
+}
+
+/* Mobile autocomplete fix */
+.input-base:-webkit-autofill {
+  -webkit-text-fill-color: #111827 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 30px #ffffff inset !important;
 }
 
 /* Scrollbar personalizada */
