@@ -4,16 +4,16 @@ import { LinkButton } from "../ui/LinkButton";
 
 export function Header() {
   return (
-    <header className="bg-surface/95 backdrop-blur-sm shadow-sm border-b border-default sticky top-0 z-50">
+    <header className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 max-w-7xl">
         <div className="flex items-center justify-between">
           <Link
             href="/"
             className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-accent to-primary-hover rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-accent to-gradient-end rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-white"
+                className="w-6 h-6 text-dark-primary"
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >
@@ -27,23 +27,23 @@ export function Header() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-primary">
+              <h1 className="text-2xl font-bold text-dark-primary">
                 Procura SP
               </h1>
-              <p className="text-xs text-secondary -mt-1">Serviços Públicos</p>
+              <p className="text-xs text-gray-600 -mt-1">Serviços Públicos</p>
             </div>
           </Link>
 
           <nav className="hidden md:flex items-center space-x-6">
             <Link
               href="/servicos"
-              className="text-secondary hover:text-primary-accent transition-colors duration-200 font-medium"
+              className="text-dark-secondary hover:text-accent transition-colors duration-200 font-medium"
             >
               Serviços
             </Link>
             <Link
               href="/sobre"
-              className="text-secondary hover:text-primary-accent transition-colors duration-200 font-medium"
+              className="text-dark-secondary hover:text-accent transition-colors duration-200 font-medium"
             >
               Sobre
             </Link>
@@ -53,7 +53,7 @@ export function Header() {
           </nav>
 
           {/* Menu mobile */}
-          <button className="md:hidden p-2 text-secondary hover:text-primary-accent transition-colors">
+          <button className="md:hidden p-2 text-dark-secondary hover:text-accent transition-colors">
             <svg
               className="w-6 h-6"
               fill="none"

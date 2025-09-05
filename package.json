@@ -4,7 +4,9 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "docker-compose up -d && echo '⏳ Aguardando banco subir...' && timeout /t 10 /nobreak > nul && next dev --turbopack",
+    "dev:only": "next dev --turbopack",
+    "dev:db": "docker-compose up -d && echo '⏳ Aguardando banco subir...' && timeout /t 10 /nobreak > nul",
     "build": "next build",
     "vercel-build": "next build",
     "start": "next start",

@@ -17,12 +17,11 @@
   
   /* Secondary Colors */
   --secondary: 0 173 181;     /* #00adb5 */
-  --secondary-hover: 0 138 145; /* #008a91 */
-  
+  --secondary-hover: 0 138 145; /* #008a91 
   /* Text Colors */
-  --text-primary: 17 24 39;   /* #111827 */
-  --text-secondary: 107 114 128; /* #6b7280 */
-  --text-muted: 156 163 175;  /* #9ca3af */
+  --text-primary: 17 24 39;   /* #111827 - gray-900 */
+  --text-secondary: 75 85 99; /* #4b5563 - gray-600 */
+  --text-muted: 156 163 175;  /* #9ca3af - gray-400 */
   --text-white: 255 255 255;
   
   /* Status Colors */
@@ -36,9 +35,9 @@
   --info-light: 219 234 254;  /* #dbeafe */
   
   /* Border Colors */
-  --border: 229 231 235;      /* #e5e7eb */
-  --border-light: 243 244 246; /* #f3f4f6 */
-  --border-focus: 59 130 246; /* #3b82f6 */
+  --border: 209 213 219;      /* #d1d5db - gray-300 */
+  --border-light: 243 244 246; /* #f3f4f6 - gray-100 */
+  --border-focus: 59 130 246; /* #3b82f6 - blue-500 */
   
   /* Shadow Colors */
   --shadow: 0 0 0;
@@ -96,53 +95,34 @@ body {
   min-height: 100vh;
 }
 
-/* Classes de cores centralizadas */
+/* Classes de cores customizadas do projeto (Procura SP) */
+.bg-accent { background-color: #00adb5; }
+.hover\:bg-accent:hover { background-color: #008a91; }
+.text-accent { color: #00adb5; }
+.border-accent { border-color: #00adb5; }
+
+.bg-dark-primary { background-color: #0e3d42; }
+.text-dark-primary { color: #0e3d42; }
+.text-dark-secondary { color: #6b7280; }
+
+.from-accent { --tw-gradient-from: #00adb5; }
+.to-gradient-end { --tw-gradient-to: #459e95; }
+
+/* Classes de cores centralizadas para customização fácil */
 .bg-surface { background-color: rgb(var(--surface)); }
 .bg-surface-secondary { background-color: rgb(var(--surface-secondary)); }
 .bg-surface-accent { background-color: rgb(var(--surface-accent)); }
 .bg-primary { background-color: rgb(var(--primary)); }
-.bg-primary-light { background-color: rgb(var(--primary-light)); }
-.bg-primary-accent { background-color: rgb(var(--primary-accent)); }
-.bg-primary-hover { background-color: rgb(var(--primary-hover)); }
 .bg-secondary { background-color: rgb(var(--secondary)); }
 .bg-secondary-hover { background-color: rgb(var(--secondary-hover)); }
-.bg-success { background-color: rgb(var(--success)); }
-.bg-success-light { background-color: rgb(var(--success-light)); }
-.bg-warning { background-color: rgb(var(--warning)); }
-.bg-warning-light { background-color: rgb(var(--warning-light)); }
-.bg-error { background-color: rgb(var(--error)); }
-.bg-error-light { background-color: rgb(var(--error-light)); }
-.bg-info { background-color: rgb(var(--info)); }
-.bg-info-light { background-color: rgb(var(--info-light)); }
 
 .text-primary { color: rgb(var(--text-primary)); }
 .text-secondary { color: rgb(var(--text-secondary)); }
 .text-muted { color: rgb(var(--text-muted)); }
-.text-white { color: rgb(var(--text-white)); }
-.text-success { color: rgb(var(--success)); }
-.text-warning { color: rgb(var(--warning)); }
-.text-error { color: rgb(var(--error)); }
-.text-info { color: rgb(var(--info)); }
 
 .border-default { border-color: rgb(var(--border)); }
 .border-light { border-color: rgb(var(--border-light)); }
 .border-focus { border-color: rgb(var(--border-focus)); }
-.border-primary { border-color: rgb(var(--primary)); }
-.border-secondary { border-color: rgb(var(--secondary)); }
-.border-success { border-color: rgb(var(--success)); }
-.border-warning { border-color: rgb(var(--warning)); }
-.border-error { border-color: rgb(var(--error)); }
-.border-info { border-color: rgb(var(--info)); }
-
-/* Hover states */
-.hover\:bg-primary-hover:hover { background-color: rgb(var(--primary-hover)); }
-.hover\:bg-secondary-hover:hover { background-color: rgb(var(--secondary-hover)); }
-.hover\:text-primary:hover { color: rgb(var(--text-primary)); }
-.hover\:border-focus:hover { border-color: rgb(var(--border-focus)); }
-
-/* Focus states */
-.focus\:border-focus:focus { border-color: rgb(var(--border-focus)); }
-.focus\:ring-info:focus { --tw-ring-color: rgb(var(--info)); }
 
 /* Estilos para inputs */
 .input-base {

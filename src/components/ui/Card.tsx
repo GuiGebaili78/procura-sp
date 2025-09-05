@@ -17,7 +17,7 @@ export function Card({
   ...props
 }: CardProps) {
   const baseClasses =
-    "bg-surface rounded-xl border border-default transition-shadow";
+    "bg-white rounded-xl border border-gray-200 transition-shadow";
 
   const variantClasses = {
     default: "shadow-lg",

@@ -164,7 +164,7 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
 
   return (
     <Card padding="md" className="mb-6">
-      <h2 className="text-2xl font-bold text-primary mb-6">
+      <h2 className="text-2xl font-bold text-dark-primary mb-6">
         Buscar Cata-Bagulho
       </h2>
 
@@ -249,12 +249,12 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
       </Button>
 
       {noResultsMessage && (
-        <div className="mt-4 p-4 bg-warning-light border border-warning rounded-lg">
+        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
           <div className="flex items-center">
-            <div className="text-warning mr-3">📍</div>
-            <p className="text-warning font-medium">{noResultsMessage}</p>
+            <div className="text-orange-600 mr-3">📍</div>
+            <p className="text-orange-700 font-medium">{noResultsMessage}</p>
           </div>
-          <p className="text-warning text-sm mt-2">
+          <p className="text-orange-600 text-sm mt-2">
             Tente verificar se o endereço está correto ou procure um endereço
             próximo.
           </p>

@@ -22,12 +22,12 @@ export function LinkButton({
 
   const variantClasses = {
     primary:
-      "bg-secondary hover:bg-secondary-hover text-white focus:ring-info",
+      "bg-accent hover:bg-accent/90 text-white focus:ring-accent/50",
     secondary:
-      "bg-primary hover:bg-primary-light text-white focus:ring-primary",
+      "bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500",
     outline:
-      "border-2 border-secondary text-secondary hover:bg-secondary hover:text-white focus:ring-info",
-    ghost: "text-secondary hover:bg-surface-accent focus:ring-info",
+      "border-2 border-accent text-accent hover:bg-accent hover:text-white focus:ring-accent/50",
+    ghost: "text-accent hover:bg-accent/10 focus:ring-accent/50",
   };
 
   const sizeClasses = {

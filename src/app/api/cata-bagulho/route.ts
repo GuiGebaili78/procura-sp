@@ -82,11 +82,48 @@ class CataBagulhoService {
       return this.parseHTML(html);
     } catch (error: unknown) {
       console.error(
-        "[Cata-Bagulho] Erro ao buscar dados:",
+        "[Cata-Bagulho] API externa indisponível:",
         error instanceof Error ? error.message : error,
       );
-      throw new Error("Erro ao buscar dados do serviço Cata-Bagulho");
+      
+      // Retorna dados de demonstração quando a API externa está fora
+      console.log("[Cata-Bagulho] Retornando dados de demonstração");
+      return this.getMockData(lat, lng);
     }
+  }
+
+  private getMockData(lat: number, lng: number): CataBagulhoResult[] {
+    // Dados de demonstração baseados na região de São Paulo
+    const mockData: CataBagulhoResult[] = [
+      {
+        street: "Avenida Paulista",
+        startStretch: "Rua Augusta",
+        endStretch: "Rua Consolação", 
+        dates: [
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
+          new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
+        ],
+        frequency: "Quinzenal",
+        shift: "Manhã",
+        schedule: "07:00 às 12:00",
+        trechos: ["demo-001"]
+      },
+      {
+        street: "Rua Augusta",
+        startStretch: "Avenida Paulista",
+        endStretch: "Rua da Consolação",
+        dates: [
+          new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
+          new Date(Date.now() + 17 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
+        ],
+        frequency: "Quinzenal", 
+        shift: "Tarde",
+        schedule: "13:00 às 17:00",
+        trechos: ["demo-002"]
+      }
+    ];
+
+    return mockData;
   }
 
   private parseHTML(html: string): CataBagulhoResult[] {
@@ -256,9 +293,18 @@ export async function GET(request: NextRequest) {
     const data = await cataBagulhoService.search(latitude, longitude);
 
     // Debug temporário
-    console.log(`[DEBUG] Dados retornados:`, JSON.stringify(data, null, 2));
+    console.log(`[DEBUG] Dados retornados: ${data.length} resultados encontrados`);
 
-    return NextResponse.json({ success: true, data });
+    // Adiciona aviso se estamos usando dados de demonstração
+    const isUsingMockData = data.length > 0 && data[0].trechos?.[0]?.startsWith('demo-');
+    
+    return NextResponse.json({ 
+      success: true, 
+      data,
+      ...(isUsingMockData && { 
+        warning: "API externa temporariamente indisponível. Exibindo dados de demonstração." 
+      })
+    });
   } catch (error: unknown) {
     console.error(
       "[API:Cata-Bagulho] Erro:",
