@@ -10,16 +10,19 @@ import { geocodeAddress } from "../../services/nominatim";
 import { searchCataBagulho } from "../../services/api";
 import { formatCep } from "../../utils/validators";
 import { CataBagulhoResult } from "../../types/cataBagulho";
+import { FeiraLivre } from "../../types/feiraLivre";
 
 interface SearchBarProps {
+  selectedService: string;
   onSearchResults: (
-    results: CataBagulhoResult[],
+    results: CataBagulhoResult[] | FeiraLivre[],
     coordinates: { lat: number; lng: number },
+    serviceType: string
   ) => void;
   onError: (error: string) => void;
 }
 
-export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
+export function SearchBar({ selectedService, onSearchResults, onError }: SearchBarProps) {
   const [cep, setCep] = useState("");
   const [numero, setNumero] = useState("");
   const [endereco, setEndereco] = useState({
@@ -96,56 +99,81 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
     setNoResultsMessage(""); // Limpa mensagem anterior
 
     try {
-      // Tenta diferentes formatos de endereço para melhorar as chances de sucesso
-      const enderecoFormats = [
-        `${endereco.logradouro}, ${numero}, ${endereco.bairro}, ${endereco.localidade}, ${endereco.uf}, Brasil`,
-        `${endereco.logradouro}, ${endereco.bairro}, ${endereco.localidade}, SP, Brasil`,
-        `${endereco.logradouro}, ${endereco.localidade}, São Paulo, Brasil`,
-        `${endereco.bairro}, ${endereco.localidade}, SP, Brasil`,
-      ];
-
-      let geocodeResults = null;
-      let enderecoUsado = "";
-
-      // Tenta cada formato até encontrar um resultado
-      for (const formato of enderecoFormats) {
-        console.log("Tentando geocodificar:", formato);
-        try {
-          const resultado = await geocodeAddress(formato);
-          if (resultado && resultado.length > 0) {
-            geocodeResults = resultado;
-            enderecoUsado = formato;
-            break;
-          }
-        } catch (err) {
-          console.warn("Formato falhou:", formato, err);
+      // Tentar geocoding real primeiro, fallback para coordenadas aproximadas
+      console.log("📍 Tentando geocoding real do endereço...");
+      
+      const enderecoCompleto = `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
+      console.log("🔍 Endereço completo:", enderecoCompleto);
+      
+      let coordinates: { lat: number; lng: number } | null = null;
+      
+      try {
+        const geocodeResults = await geocodeAddress(enderecoCompleto);
+        if (geocodeResults && geocodeResults.length > 0) {
+          coordinates = {
+            lat: parseFloat(geocodeResults[0].lat),
+            lng: parseFloat(geocodeResults[0].lon)
+          };
+          console.log("✅ Coordenadas reais obtidas via geocoding:", coordinates);
         }
+      } catch (geocodeError) {
+        console.log("⚠️ Geocoding falhou, usando coordenadas aproximadas por CEP");
+        coordinates = obterCoordenadasAproximadasPorCEP(cep);
       }
-
-      if (!geocodeResults || geocodeResults.length === 0) {
+      
+      if (!coordinates) {
         throw new Error(
           "Não foi possível encontrar as coordenadas do endereço. Verifique se o CEP e número estão corretos.",
         );
       }
 
-      console.log("Sucesso com formato:", enderecoUsado);
+      console.log("✅ Coordenadas finais:", coordinates);
 
-      const { lat, lon } = geocodeResults[0];
-      const coordinates = { lat: parseFloat(lat), lng: parseFloat(lon) };
+      // Busca serviços baseado no tipo selecionado
+      if (selectedService === "cata-bagulho") {
+        console.log("🔍 [SearchBar] Iniciando busca de Cata-Bagulho...");
+        console.log("📍 [SearchBar] Coordenadas:", coordinates);
+        
+        const results = await searchCataBagulho(coordinates.lat, coordinates.lng);
+        
+        console.log("📊 [SearchBar] Resultados recebidos:", results);
+        console.log("📊 [SearchBar] Quantidade de resultados:", results?.length || 0);
 
-      console.log("Coordenadas obtidas:", coordinates);
+        if (!results || results.length === 0) {
+          console.log("❌ [SearchBar] Nenhum resultado encontrado");
+          setNoResultsMessage(
+            "Nenhum serviço de Cata-Bagulho encontrado para este endereço.",
+          );
+          return;
+        }
 
-      // Busca serviços de Cata-Bagulho
-      const results = await searchCataBagulho(coordinates.lat, coordinates.lng);
+        console.log("✅ [SearchBar] Enviando resultados para o componente pai");
+        onSearchResults(results, coordinates, "cata-bagulho");
+      } else if (selectedService === "feiras-livres") {
+        const response = await fetch('/api/feiras', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            endereco: `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`,
+            numero,
+            latitude: coordinates.lat,
+            longitude: coordinates.lng
+          })
+        });
 
-      if (!results || results.length === 0) {
-        setNoResultsMessage(
-          "Nenhum serviço de Cata-Bagulho encontrado para este endereço.",
-        );
-        return;
+        const data = await response.json();
+
+        if (!data.success || !data.data?.feiras || data.data.feiras.length === 0) {
+          setNoResultsMessage(
+            "Nenhuma feira livre encontrada para este endereço.",
+          );
+          return;
+        }
+
+        onSearchResults(data.data.feiras, coordinates, "feiras-livres");
       }
-
-      onSearchResults(results, coordinates);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Erro ao buscar serviços";
@@ -162,10 +190,54 @@ export function SearchBar({ onSearchResults, onError }: SearchBarProps) {
     }
   };
 
+  // Método para obter coordenadas aproximadas baseadas no CEP
+  const obterCoordenadasAproximadasPorCEP = (cep: string): { lat: number; lng: number } | null => {
+    const cepNumerico = cep.replace(/\D/g, '');
+    
+    // Coordenadas mais precisas por região de São Paulo baseadas no CEP
+    const coordenadasPorRegiao: { [key: string]: { lat: number; lng: number } } = {
+      // Centro (01000-01999) - Centro Histórico, República, Sé
+      '01': { lat: -23.5505, lng: -46.6333 },
+      // Zona Norte (02000-02999) - Santana, Tucuruvi, Casa Verde
+      '02': { lat: -23.4800, lng: -46.6200 },
+      // Zona Leste (03000-03999) - Tatuapé, Mooca, Penha
+      '03': { lat: -23.5400, lng: -46.4800 },
+      // Zona Sul (04000-04999) - Vila Olímpia, Moema, Campo Belo
+      '04': { lat: -23.6000, lng: -46.6500 },
+      // Zona Oeste (05000-05999) - Lapa, Pinheiros, Butantã
+      '05': { lat: -23.5500, lng: -46.7200 },
+      // Zona Norte (06000-06999) - Freguesia do Ó, Pirituba
+      '06': { lat: -23.4500, lng: -46.7000 },
+      // Zona Leste (07000-07999) - São Miguel, Itaquera
+      '07': { lat: -23.5000, lng: -46.4000 },
+      // Zona Sul (08000-08999) - Santo Amaro, Jabaquara
+      '08': { lat: -23.6500, lng: -46.6200 },
+      // Zona Sul (09000-09999) - Interlagos, Campo Limpo
+      '09': { lat: -23.7000, lng: -46.7000 },
+    };
+
+    const prefixo = cepNumerico.substring(0, 2);
+    const coordenadas = coordenadasPorRegiao[prefixo];
+    
+    if (coordenadas) {
+      // Adicionar variação mais sutil baseada no CEP para evitar sobreposição
+      const variacaoLat = (parseInt(cepNumerico.substring(2, 4)) / 100) * 0.005;
+      const variacaoLng = (parseInt(cepNumerico.substring(4, 6)) / 100) * 0.005;
+      
+      return {
+        lat: coordenadas.lat + variacaoLat,
+        lng: coordenadas.lng + variacaoLng
+      };
+    }
+    
+    // Fallback para São Paulo centro
+    return { lat: -23.5505, lng: -46.6333 };
+  };
+
   return (
     <Card padding="md" className="mb-6">
       <h2 className="text-2xl font-bold text-dark-primary mb-6">
-        Buscar Cata-Bagulho
+        Buscar {selectedService === "cata-bagulho" ? "Cata-Bagulho" : "Feiras Livres"}
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

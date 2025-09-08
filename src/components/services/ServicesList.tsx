@@ -1,13 +1,24 @@
 import { ServiceCard } from "./ServiceCard";
+import { FeirasList } from "./FeirasList";
 import { CataBagulhoResult } from "../../types/cataBagulho";
+import { FeiraLivre } from "../../types/feiraLivre";
 
 interface ServicesListProps {
-  services: CataBagulhoResult[];
+  services?: CataBagulhoResult[];
+  feiras?: FeiraLivre[];
+  serviceType?: string;
   onViewTrecho?: (trechoId: string) => void;
+  selectedFeiraId?: string;
 }
 
-export function ServicesList({ services, onViewTrecho }: ServicesListProps) {
-  if (services.length === 0) {
+export function ServicesList({ services, feiras, serviceType, onViewTrecho, selectedFeiraId }: ServicesListProps) {
+  // Se for feiras livres, usar o componente específico
+  if (serviceType === "feiras-livres" && feiras) {
+    return <FeirasList feiras={feiras} onViewTrecho={onViewTrecho} selectedFeiraId={selectedFeiraId} />;
+  }
+
+  // Se for cata-bagulho ou outros serviços
+  if (services && services.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-8 text-center">
         <div className="text-6xl mb-4">🤷</div>
@@ -22,11 +33,15 @@ export function ServicesList({ services, onViewTrecho }: ServicesListProps) {
     );
   }
 
+  if (!services || services.length === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
       {services.map((service, index) => (
         <ServiceCard
-          key={`${service.street}-${index}`}
+          key={`${service.street}-${service.startStretch || ''}-${service.endStretch || ''}-${index}`}
           service={service}
           onViewTrecho={onViewTrecho}
         />

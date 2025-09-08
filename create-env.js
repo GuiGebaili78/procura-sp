@@ -17,6 +17,9 @@ POSTGRES_USER=procura_sp_user
 POSTGRES_PASSWORD=procura_sp_password
 POSTGRES_DB=procura_sp_db
 
+# Database (Porta externa para conexões diretas)
+POSTGRES_EXTERNAL_PORT=5434
+
 # Backend
 BACKEND_PORT=3000
 

@@ -30,6 +30,7 @@ export const SERVICE_TYPES = [
 export const SERVICE_ICONS = {
   "coleta-lixo": "🗑️",
   "cata-bagulho": "🚛",
+  "feiras-livres": "🛒",
   saude: "🏥",
   vacinacao: "💉",
   "bem-estar-animal": "🐕",

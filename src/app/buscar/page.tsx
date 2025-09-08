@@ -7,6 +7,7 @@ import { ServiceSelector } from "../../components/search/ServiceSelector";
 import { ServicesList } from "../../components/services/ServicesList";
 import { Layout } from "../../components/layout/Layout";
 import { CataBagulhoResult, TrechoCoordinates } from "../../types/cataBagulho";
+import { FeiraLivre } from "../../types/feiraLivre";
 import { fetchTrechoCoordinates } from "../../services/trechoService";
 import { Card } from "../../components/ui/Card";
 
@@ -35,6 +36,7 @@ const MapView = dynamic(
 
 export default function BuscarPage() {
   const [searchResults, setSearchResults] = useState<CataBagulhoResult[]>([]);
+  const [feirasResults, setFeirasResults] = useState<FeiraLivre[]>([]);
   const [userCoordinates, setUserCoordinates] = useState<{
     lat: number;
     lng: number;
@@ -45,14 +47,25 @@ export default function BuscarPage() {
   const [loadingTrecho, setLoadingTrecho] = useState(false);
   const [selectedService, setSelectedService] =
     useState<string>("cata-bagulho");
+  const [currentServiceType, setCurrentServiceType] = useState<string>("cata-bagulho");
+  const [selectedFeiraId, setSelectedFeiraId] = useState<string | undefined>(undefined);
 
   const handleSearchResults = (
-    results: CataBagulhoResult[],
+    results: CataBagulhoResult[] | FeiraLivre[],
     coordinates: { lat: number; lng: number },
+    serviceType: string
   ) => {
-    setSearchResults(results);
+    if (serviceType === "cata-bagulho") {
+      setSearchResults(results as CataBagulhoResult[]);
+      setFeirasResults([]);
+    } else if (serviceType === "feiras-livres") {
+      setFeirasResults(results as FeiraLivre[]);
+      setSearchResults([]);
+    }
     setUserCoordinates(coordinates);
+    setCurrentServiceType(serviceType);
     setTrechoCoordinates(null); // Limpa trecho anterior
+    setSelectedFeiraId(undefined); // Limpa seleção de feira anterior
     setError("");
 
     // Auto-scroll para os resultados
@@ -76,14 +89,25 @@ export default function BuscarPage() {
   const handleVerTrecho = async (trechoId: string) => {
     setLoadingTrecho(true);
     try {
-      const trecho = await fetchTrechoCoordinates(trechoId);
-      setTrechoCoordinates(trecho);
-      setError("");
+      // Se for feira livre (detectado pelo prefixo ou tipo de serviço), não busca trecho
+      if (currentServiceType === "feiras-livres" || trechoId.startsWith("feira-")) {
+        // Para feiras, definir a feira selecionada para mostrar a rota
+        setSelectedFeiraId(trechoId);
+        setTrechoCoordinates(null);
+        setError("");
+      } else {
+        // Para cata-bagulho, busca as coordenadas do trecho
+        const trecho = await fetchTrechoCoordinates(trechoId);
+        setTrechoCoordinates(trecho);
+        setSelectedFeiraId(undefined); // Limpar seleção de feira
+        setError("");
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Erro ao carregar trecho";
       setError(`Erro ao carregar trecho: ${message}`);
       setTrechoCoordinates(null);
+      setSelectedFeiraId(undefined);
     } finally {
       setLoadingTrecho(false);
     }
@@ -118,6 +142,7 @@ export default function BuscarPage() {
         </Card>
 
         <SearchBar
+          selectedService={selectedService}
           onSearchResults={handleSearchResults}
           onError={handleError}
         />
@@ -128,27 +153,29 @@ export default function BuscarPage() {
         >
           {/* Coluna dos Resultados */}
           <div className="space-y-6">
-            {searchResults.length > 0 && (
+            {(searchResults.length > 0 || feirasResults.length > 0) && (
               <Card padding="md">
                 <h2 className="text-2xl font-bold text-dark-primary mb-4">
-                  Resultados Encontrados ({searchResults.length})
+                  Resultados Encontrados ({searchResults.length + feirasResults.length})
                 </h2>
                 <ServicesList
                   services={searchResults}
+                  feiras={feirasResults}
+                  serviceType={currentServiceType}
                   onViewTrecho={handleVerTrecho}
+                  selectedFeiraId={selectedFeiraId}
                 />
               </Card>
             )}
 
-            {searchResults.length === 0 && !error && (
+            {searchResults.length === 0 && feirasResults.length === 0 && !error && (
               <Card padding="lg" className="text-center">
                 <div className="text-6xl mb-4">🔍</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   Faça uma busca
                 </h3>
                 <p className="text-gray-600">
-                  Digite seu CEP e número para encontrar serviços de
-                  Cata-Bagulho na sua região.
+                  Digite seu CEP e número para encontrar {selectedService === "cata-bagulho" ? "serviços de Cata-Bagulho" : "feiras livres"} na sua região.
                 </p>
               </Card>
             )}
@@ -174,7 +201,11 @@ export default function BuscarPage() {
                   userLocation={[userCoordinates.lat, userCoordinates.lng]}
                   trechoCoordinates={trechoCoordinates}
                   className="sticky top-4"
+                  isFeira={currentServiceType === "feiras-livres"}
+                  feiras={currentServiceType === "feiras-livres" ? feirasResults : []}
+                  selectedFeiraId={selectedFeiraId}
                 />
+                
               </>
             )}
 

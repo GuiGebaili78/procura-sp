@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 3000
 
 # Comando padrão para desenvolvimento
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev:only"]

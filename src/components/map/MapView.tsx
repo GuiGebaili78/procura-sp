@@ -11,6 +11,7 @@ import {
 } from "react-leaflet";
 import { LatLngTuple, Icon, LatLngBounds } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import { TrechoCoordinates } from "../../types/cataBagulho";
 
 // Ícones customizados
@@ -35,20 +36,65 @@ interface MapViewProps {
   userLocation?: LatLngTuple;
   trechoCoordinates?: TrechoCoordinates | null;
   className?: string;
+  isFeira?: boolean;
+  feiras?: Array<{
+    id: string;
+    nome: string;
+    endereco: string;
+    coords?: { lat: number; lng: number };
+  }>;
+  selectedFeiraId?: string;
+}
+
+// Componente para gerenciar rotas (temporariamente desabilitado)
+function RouteController({
+  selectedFeiraId,
+}: {
+  userLocation?: LatLngTuple;
+  selectedFeiraId?: string;
+  feiras?: Array<{
+    id: string;
+    coords?: { lat: number; lng: number };
+  }>;
+}) {
+  // TODO: Implementar roteamento quando a biblioteca estiver funcionando
+  console.log('Rota solicitada para feira:', selectedFeiraId);
+  return null;
 }
 
 // Componente para ajustar automaticamente a visualização do mapa
 function MapController({
   userLocation,
   trechoCoordinates,
+  feiras = [],
+  isFeira = false,
 }: {
   userLocation?: LatLngTuple;
   trechoCoordinates?: TrechoCoordinates | null;
+  feiras?: Array<{ coords?: { lat: number; lng: number } }>;
+  isFeira?: boolean;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    if (
+    if (isFeira && feiras.length > 0) {
+      // Para feiras, ajustar para mostrar todas as feiras e o usuário
+      const bounds = new LatLngBounds([]);
+      
+      if (userLocation) {
+        bounds.extend(userLocation);
+      }
+      
+      feiras.forEach(feira => {
+        if (feira.coords) {
+          bounds.extend([feira.coords.lat, feira.coords.lng]);
+        }
+      });
+      
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [20, 20] });
+      }
+    } else if (
       trechoCoordinates &&
       trechoCoordinates.coordinates &&
       trechoCoordinates.coordinates.length > 0
@@ -72,7 +118,7 @@ function MapController({
       // Se apenas tem localização do usuário, centraliza nela
       map.setView(userLocation, 16);
     }
-  }, [map, userLocation, trechoCoordinates]);
+  }, [map, userLocation, trechoCoordinates, feiras, isFeira]);
 
   return null;
 }
@@ -82,6 +128,9 @@ export function MapView({
   userLocation,
   trechoCoordinates,
   className = "",
+  isFeira = false,
+  feiras = [],
+  selectedFeiraId,
 }: MapViewProps) {
   // Fix para ícones do Leaflet no Next.js
   useEffect(() => {
@@ -127,7 +176,18 @@ export function MapView({
           <MapController
             userLocation={userLocation}
             trechoCoordinates={trechoCoordinates}
+            feiras={feiras}
+            isFeira={isFeira}
           />
+
+          {/* Controlador para rotas */}
+          {isFeira && (
+            <RouteController
+              userLocation={userLocation}
+              selectedFeiraId={selectedFeiraId}
+              feiras={feiras}
+            />
+          )}
 
           {/* Marcador da localização do usuário */}
           {userLocation && (
@@ -143,6 +203,27 @@ export function MapView({
               </Popup>
             </Marker>
           )}
+
+          {/* Marcadores das feiras */}
+          {isFeira && feiras.map((feira) => {
+            if (!feira.coords) return null;
+            
+            return (
+              <Marker 
+                key={feira.id} 
+                position={[feira.coords.lat, feira.coords.lng]} 
+                icon={createCustomIcon("#22C55E")}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <strong>🛒 {feira.nome}</strong>
+                    <br />
+                    <small>{feira.endereco}</small>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
 
           {/* Linha do trecho */}
           {trechoCoordinates &&

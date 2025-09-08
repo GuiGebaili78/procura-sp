@@ -175,12 +175,16 @@ export async function GET(
       "[API:CEP] Erro:",
       error instanceof Error ? error.message : error,
     );
+    
+    const errorMessage = error instanceof Error ? error.message : "Erro ao buscar CEP";
+    const statusCode = errorMessage === "CEP não encontrado" ? 404 : 500;
+    
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : "Erro ao buscar CEP",
+        message: errorMessage,
       },
-      { status: 500 },
+      { status: statusCode },
     );
   }
 }

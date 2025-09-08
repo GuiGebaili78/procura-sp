@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: procura-sp-app
     ports:
       - "3000:3000"
     volumes:
@@ -18,7 +19,7 @@ services:
     depends_on:
       procura-sp-db:
         condition: service_healthy
-    command: npm run dev
+    command: npm run dev:only
 
   procura-sp-db:
     image: postgres:17.4-alpine3.21
