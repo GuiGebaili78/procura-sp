@@ -1,6 +1,16 @@
 import database from '../database';
 import { ColetaLixo, ColetaLixoSearchParams, ColetaLixoApiResponse, ColetaLixoResponse } from '../../types/coletaLixo';
-import * as cheerio from 'cheerio';
+// import * as cheerio from 'cheerio'; // Comentado até implementar o parsing
+
+// Interface para dados da API da Ecourbis
+interface EcourbisApiItem {
+  tipo?: string;
+  endereco?: string;
+  dias?: string | string[];
+  horarios?: string | string[];
+  frequencia?: string;
+  observacoes?: string;
+}
 
 /**
  * Serviço para buscar dados de Coleta de Lixo
@@ -42,7 +52,7 @@ export class ColetaLixoService {
 
       // Buscar dados das duas fontes
       const [dadosPrefeitura, dadosEcourbis] = await Promise.allSettled([
-        this.fazerScrapingPrefeitura(params.latitude, params.longitude),
+        this.fazerScrapingPrefeitura(),
         this.fazerScrapingEcourbis(params.latitude, params.longitude)
       ]);
 
@@ -106,7 +116,7 @@ export class ColetaLixoService {
   /**
    * Faz scraping da página da prefeitura
    */
-  private async fazerScrapingPrefeitura(latitude: number, longitude: number): Promise<ColetaLixoResponse | null> {
+  private async fazerScrapingPrefeitura(): Promise<ColetaLixoResponse | null> {
     try {
       console.log('🔍 Fazendo scraping da Prefeitura SP...');
       
@@ -120,8 +130,8 @@ export class ColetaLixoService {
         throw new Error(`Erro na requisição da prefeitura: ${response.status}`);
       }
 
-      const html = await response.text();
-      const $ = cheerio.load(html);
+      // const html = await response.text(); // Comentado até implementar o parsing
+      // const $ = cheerio.load(html); // Comentado até implementar o parsing
       
       // Aqui você implementaria o parsing específico da página da prefeitura
       // Por enquanto, retornamos null para usar dados mock
@@ -164,7 +174,7 @@ export class ColetaLixoService {
         const coletaSeletiva: ColetaLixo[] = [];
         
         // Processar cada item retornado pela API
-        data.forEach((item: any, index: number) => {
+        data.forEach((item: EcourbisApiItem, index: number) => {
           if (item.tipo === 'comum' || item.tipo === 'orgânico') {
             coletaComum.push({
               id: `ecourbis-comum-${index}`,
@@ -212,7 +222,7 @@ export class ColetaLixoService {
   /**
    * Processa dias da semana retornados pela API
    */
-  private processarDiasSemana(dias: any): string[] {
+  private processarDiasSemana(dias: string | string[] | undefined): string[] {
     if (!dias) return ['Não informado'];
     
     if (Array.isArray(dias)) {
@@ -253,7 +263,7 @@ export class ColetaLixoService {
   /**
    * Processa horários retornados pela API
    */
-  private processarHorarios(horarios: any): string[] {
+  private processarHorarios(horarios: string | string[] | undefined): string[] {
     if (!horarios) return ['Não informado'];
     
     if (Array.isArray(horarios)) {

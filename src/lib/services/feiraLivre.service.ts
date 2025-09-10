@@ -62,9 +62,10 @@ export class FeiraLivreService {
       );
       
       console.log('✅ Feiras encontradas:', feiras.length, '- Coordenadas extraídas do HTML');
+      console.log('📍 Feiras mais próximas selecionadas:', feirasMaisProximas.length);
       
-      // Salvar no cache
-      await this.salvarCache(params.latitude, params.longitude, params.endereco, feiras);
+      // Salvar no cache (salvar apenas as 5 mais próximas para consistência)
+      await this.salvarCache(params.latitude, params.longitude, params.endereco, feirasMaisProximas);
 
       return {
         success: true,
@@ -115,6 +116,9 @@ export class FeiraLivreService {
     console.log(`🔍 Debug - Encontrados ${feiraElements.length} elementos com classe feira-`);
 
     feiraElements.each((index, element) => {
+      // Limitar a processar apenas as primeiras 10 feiras para otimizar performance
+      if (index >= 10) return false;
+      
       try {
         const $element = $(element);
         const className = $element.attr('class') || '';
@@ -213,6 +217,9 @@ export class FeiraLivreService {
     
     // Procurar por padrões de texto que indiquem feiras
     $('div, p, li').each((index, element) => {
+      // Limitar a processar apenas as primeiras 10 feiras para otimizar performance
+      if (index >= 10) return false;
+      
       const texto = $(element).text().trim();
       
       if (texto.includes('feira') || texto.includes('Feira')) {
