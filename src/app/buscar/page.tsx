@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { SearchBar } from "../../components/search/SearchBar";
 import { ServiceSelector } from "../../components/search/ServiceSelector";
@@ -10,6 +11,7 @@ import { CataBagulhoResult, TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { fetchTrechoCoordinates } from "../../services/trechoService";
 import { Card } from "../../components/ui/Card";
+import { FeirasSkeletonLoading, CataBagulhoSkeletonLoading } from "../../components/ui/SkeletonLoading";
 
 // Dynamic import do mapa para evitar problemas de SSR
 const MapView = dynamic(
@@ -34,7 +36,8 @@ const MapView = dynamic(
   },
 );
 
-export default function BuscarPage() {
+function BuscarPageContent() {
+  const searchParams = useSearchParams();
   const [searchResults, setSearchResults] = useState<CataBagulhoResult[]>([]);
   const [feirasResults, setFeirasResults] = useState<FeiraLivre[]>([]);
   const [userCoordinates, setUserCoordinates] = useState<{
@@ -45,16 +48,28 @@ export default function BuscarPage() {
     useState<TrechoCoordinates | null>(null);
   const [error, setError] = useState<string>("");
   const [loadingTrecho, setLoadingTrecho] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
   const [selectedService, setSelectedService] =
     useState<string>("cata-bagulho");
   const [currentServiceType, setCurrentServiceType] = useState<string>("cata-bagulho");
   const [selectedFeiraId, setSelectedFeiraId] = useState<string | undefined>(undefined);
+
+  // Verificar parâmetros da URL para pré-selecionar serviço
+  useEffect(() => {
+    const serviceParam = searchParams.get('service');
+    if (serviceParam === 'feiras-livres') {
+      setSelectedService('feiras-livres');
+      setCurrentServiceType('feiras-livres');
+    }
+  }, [searchParams]);
 
   const handleSearchResults = (
     results: CataBagulhoResult[] | FeiraLivre[],
     coordinates: { lat: number; lng: number },
     serviceType: string
   ) => {
+    setLoadingSearch(false);
+    
     if (serviceType === "cata-bagulho") {
       setSearchResults(results as CataBagulhoResult[]);
       setFeirasResults([]);
@@ -81,9 +96,15 @@ export default function BuscarPage() {
   };
 
   const handleError = (errorMessage: string) => {
+    setLoadingSearch(false);
     setError(errorMessage);
     setSearchResults([]);
     setTrechoCoordinates(null);
+  };
+
+  const handleSearchStart = () => {
+    setLoadingSearch(true);
+    setError("");
   };
 
   const handleVerTrecho = async (trechoId: string) => {
@@ -145,6 +166,7 @@ export default function BuscarPage() {
           selectedService={selectedService}
           onSearchResults={handleSearchResults}
           onError={handleError}
+          onSearchStart={handleSearchStart}
         />
 
         <div
@@ -153,7 +175,20 @@ export default function BuscarPage() {
         >
           {/* Coluna dos Resultados */}
           <div className="space-y-6">
-            {(searchResults.length > 0 || feirasResults.length > 0) && (
+            {loadingSearch && (
+              <Card padding="md">
+                <h2 className="text-2xl font-bold text-dark-primary mb-4">
+                  Buscando...
+                </h2>
+                {currentServiceType === "feiras-livres" ? (
+                  <FeirasSkeletonLoading />
+                ) : (
+                  <CataBagulhoSkeletonLoading />
+                )}
+              </Card>
+            )}
+
+            {!loadingSearch && (searchResults.length > 0 || feirasResults.length > 0) && (
               <Card padding="md">
                 <h2 className="text-2xl font-bold text-dark-primary mb-4">
                   Resultados Encontrados ({searchResults.length + feirasResults.length})
@@ -168,7 +203,7 @@ export default function BuscarPage() {
               </Card>
             )}
 
-            {searchResults.length === 0 && feirasResults.length === 0 && !error && (
+            {!loadingSearch && searchResults.length === 0 && feirasResults.length === 0 && !error && (
               <Card padding="lg" className="text-center">
                 <div className="text-6xl mb-4">🔍</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -224,5 +259,29 @@ export default function BuscarPage() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+export default function BuscarPage() {
+  return (
+    <Suspense fallback={
+      <Layout>
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-white mb-4 text-center">
+              Buscar Serviços Públicos
+            </h1>
+            <p className="text-white/90 text-center text-lg">
+              Carregando...
+            </p>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="spinner w-8 h-8"></div>
+          </div>
+        </div>
+      </Layout>
+    }>
+      <BuscarPageContent />
+    </Suspense>
   );
 }

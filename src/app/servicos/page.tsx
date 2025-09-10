@@ -111,6 +111,41 @@ export default function ServicosPage() {
                 </div>
               </Card>
             ))}
+            
+            {/* Cartão específico para Feiras Livres */}
+            <Card padding="md">
+              <div className="text-center mb-4">
+                <div className="text-4xl mb-2">
+                  {SERVICE_ICONS["feiras-livres"]}
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Feiras Livres
+                </h3>
+              </div>
+
+              <div className="text-sm text-gray-600 mb-4">
+                <p>
+                  Encontre feiras livres próximas ao seu endereço com horários,
+                  dias da semana e localização precisa no mapa.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                    ✅ Disponível
+                  </span>
+                </div>
+                <LinkButton
+                  href="/buscar?service=feiras-livres"
+                  variant="primary"
+                  size="sm"
+                  className="rounded-full"
+                >
+                  Buscar
+                </LinkButton>
+              </div>
+            </Card>
           </div>
 
           {/* Info Section */}

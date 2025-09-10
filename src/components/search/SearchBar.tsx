@@ -20,9 +20,10 @@ interface SearchBarProps {
     serviceType: string
   ) => void;
   onError: (error: string) => void;
+  onSearchStart?: () => void;
 }
 
-export function SearchBar({ selectedService, onSearchResults, onError }: SearchBarProps) {
+export function SearchBar({ selectedService, onSearchResults, onError, onSearchStart }: SearchBarProps) {
   const [cep, setCep] = useState("");
   const [numero, setNumero] = useState("");
   const [endereco, setEndereco] = useState({
@@ -32,6 +33,7 @@ export function SearchBar({ selectedService, onSearchResults, onError }: SearchB
     uf: "",
   });
   const [loading, setLoading] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState("");
   const [noResultsMessage, setNoResultsMessage] = useState("");
 
@@ -49,6 +51,7 @@ export function SearchBar({ selectedService, onSearchResults, onError }: SearchB
 
     // Auto-busca quando CEP estiver completo
     if (formatted.replace(/\D/g, "").length === 8) {
+      setLoadingCep(true);
       try {
         const cepData = await fetchCep(formatted);
         setEndereco({
@@ -77,6 +80,8 @@ export function SearchBar({ selectedService, onSearchResults, onError }: SearchB
           uf: "",
         });
         setNumero("");
+      } finally {
+        setLoadingCep(false);
       }
     } else {
       // Limpa endereço se CEP incompleto
@@ -97,6 +102,7 @@ export function SearchBar({ selectedService, onSearchResults, onError }: SearchB
 
     setLoading(true);
     setNoResultsMessage(""); // Limpa mensagem anterior
+    onSearchStart?.(); // Notifica que a busca começou
 
     try {
       // Tentar geocoding real primeiro, fallback para coordenadas aproximadas
@@ -116,7 +122,7 @@ export function SearchBar({ selectedService, onSearchResults, onError }: SearchB
           };
           console.log("✅ Coordenadas reais obtidas via geocoding:", coordinates);
         }
-      } catch (geocodeError) {
+      } catch {
         console.log("⚠️ Geocoding falhou, usando coordenadas aproximadas por CEP");
         coordinates = obterCoordenadasAproximadasPorCEP(cep);
       }
@@ -251,7 +257,13 @@ export function SearchBar({ selectedService, onSearchResults, onError }: SearchB
             maxLength={9}
             error={cepError}
             helperText="Digite o CEP para buscar o endereço automaticamente"
+            disabled={loadingCep}
           />
+          {loadingCep && (
+            <div className="mt-2">
+              <Loading size="sm" variant="dots" text="Buscando endereço..." />
+            </div>
+          )}
         </div>
 
         <div>
@@ -262,6 +274,7 @@ export function SearchBar({ selectedService, onSearchResults, onError }: SearchB
             value={numero}
             onChange={(e) => setNumero(e.target.value)}
             onKeyPress={handleKeyPress}
+            disabled={loadingCep}
           />
         </div>
       </div>
@@ -305,15 +318,15 @@ export function SearchBar({ selectedService, onSearchResults, onError }: SearchB
 
       <Button
         onClick={handleSearch}
-        disabled={loading || !cep || !numero || !endereco.logradouro}
+        disabled={loading || loadingCep || !cep || !numero || !endereco.logradouro}
         variant="primary"
         size="lg"
         className="w-full"
       >
         {loading ? (
           <>
-            <Loading size="sm" />
-            Buscando...
+            <Loading size="sm" variant="dots" />
+            Buscando serviços...
           </>
         ) : (
           "Buscar Serviços"

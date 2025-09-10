@@ -13,6 +13,7 @@ import { LatLngTuple, Icon, LatLngBounds } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import { TrechoCoordinates } from "../../types/cataBagulho";
+import { FeiraLivre } from "../../types/feiraLivre";
 
 // Ícones customizados
 const createCustomIcon = (color: string) =>
@@ -37,12 +38,7 @@ interface MapViewProps {
   trechoCoordinates?: TrechoCoordinates | null;
   className?: string;
   isFeira?: boolean;
-  feiras?: Array<{
-    id: string;
-    nome: string;
-    endereco: string;
-    coords?: { lat: number; lng: number };
-  }>;
+  feiras?: FeiraLivre[];
   selectedFeiraId?: string;
 }
 
@@ -52,10 +48,7 @@ function RouteController({
 }: {
   userLocation?: LatLngTuple;
   selectedFeiraId?: string;
-  feiras?: Array<{
-    id: string;
-    coords?: { lat: number; lng: number };
-  }>;
+  feiras?: FeiraLivre[];
 }) {
   // TODO: Implementar roteamento quando a biblioteca estiver funcionando
   console.log('Rota solicitada para feira:', selectedFeiraId);
@@ -71,7 +64,7 @@ function MapController({
 }: {
   userLocation?: LatLngTuple;
   trechoCoordinates?: TrechoCoordinates | null;
-  feiras?: Array<{ coords?: { lat: number; lng: number } }>;
+  feiras?: FeiraLivre[];
   isFeira?: boolean;
 }) {
   const map = useMap();
@@ -218,7 +211,7 @@ export function MapView({
                   <div className="text-center">
                     <strong>🛒 {feira.nome}</strong>
                     <br />
-                    <small>{feira.endereco}</small>
+                    <small>{feira.diaSemana}</small>
                   </div>
                 </Popup>
               </Marker>
