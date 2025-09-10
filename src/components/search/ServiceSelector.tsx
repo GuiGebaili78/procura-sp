@@ -30,6 +30,9 @@ export function ServiceSelector({
           <option value="feiras-livres">
             {SERVICE_ICONS["feiras-livres"]} Feiras Livres
           </option>
+          <option value="coleta-lixo">
+            {SERVICE_ICONS["coleta-lixo"]} Coleta de Lixo
+          </option>
         </select>
       </div>
 
@@ -51,7 +54,7 @@ export function ServiceSelector({
                 <li>Não recolhe lixo comum</li>
               </ul>
             </div>
-          ) : (
+          ) : selectedService === "feiras-livres" ? (
             <div>
               <p className="mb-2">
                 <strong>Feiras Livres:</strong> Encontre feiras livres próximas
@@ -62,6 +65,19 @@ export function ServiceSelector({
                 <li>Horários e dias específicos</li>
                 <li>Localização precisa no mapa</li>
                 <li>Informações atualizadas</li>
+              </ul>
+            </div>
+          ) : (
+            <div>
+              <p className="mb-2">
+                <strong>Coleta de Lixo:</strong> Consulte horários de coleta
+                comum e seletiva na sua região.
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Coleta comum (lixo orgânico)</li>
+                <li>Coleta seletiva (recicláveis)</li>
+                <li>Horários e dias específicos</li>
+                <li>Informações oficiais</li>
               </ul>
             </div>
           )}

@@ -35,6 +35,7 @@ const trechoIcon = createCustomIcon("#FF6B6B");
 interface MapViewProps {
   center: LatLngTuple;
   userLocation?: LatLngTuple;
+  userAddress?: string;
   trechoCoordinates?: TrechoCoordinates | null;
   className?: string;
   isFeira?: boolean;
@@ -119,6 +120,7 @@ function MapController({
 export function MapView({
   center,
   userLocation,
+  userAddress,
   trechoCoordinates,
   className = "",
   isFeira = false,
@@ -187,9 +189,15 @@ export function MapView({
             <Marker position={userLocation} icon={userLocationIcon}>
               <Popup>
                 <div className="text-center">
-                  <strong>Sua Localização</strong>
+                  <strong>📍 Sua Localização</strong>
                   <br />
-                  <small>
+                  {userAddress && (
+                    <>
+                      <small className="text-gray-600">{userAddress}</small>
+                      <br />
+                    </>
+                  )}
+                  <small className="text-gray-500">
                     {userLocation[0].toFixed(6)}, {userLocation[1].toFixed(6)}
                   </small>
                 </div>

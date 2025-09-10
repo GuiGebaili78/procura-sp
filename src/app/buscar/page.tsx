@@ -9,6 +9,7 @@ import { ServicesList } from "../../components/services/ServicesList";
 import { Layout } from "../../components/layout/Layout";
 import { CataBagulhoResult, TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
+import { ColetaLixoResponse } from "../../types/coletaLixo";
 import { fetchTrechoCoordinates } from "../../services/trechoService";
 import { Card } from "../../components/ui/Card";
 import { FeirasSkeletonLoading, CataBagulhoSkeletonLoading } from "../../components/ui/SkeletonLoading";
@@ -40,10 +41,12 @@ function BuscarPageContent() {
   const searchParams = useSearchParams();
   const [searchResults, setSearchResults] = useState<CataBagulhoResult[]>([]);
   const [feirasResults, setFeirasResults] = useState<FeiraLivre[]>([]);
+  const [coletaLixoResults, setColetaLixoResults] = useState<ColetaLixoResponse | undefined>(undefined);
   const [userCoordinates, setUserCoordinates] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
+  const [userAddress, setUserAddress] = useState<string>("");
   const [trechoCoordinates, setTrechoCoordinates] =
     useState<TrechoCoordinates | null>(null);
   const [error, setError] = useState<string>("");
@@ -60,24 +63,35 @@ function BuscarPageContent() {
     if (serviceParam === 'feiras-livres') {
       setSelectedService('feiras-livres');
       setCurrentServiceType('feiras-livres');
+    } else if (serviceParam === 'coleta-lixo') {
+      setSelectedService('coleta-lixo');
+      setCurrentServiceType('coleta-lixo');
     }
   }, [searchParams]);
 
   const handleSearchResults = (
-    results: CataBagulhoResult[] | FeiraLivre[],
+    results: CataBagulhoResult[] | FeiraLivre[] | ColetaLixoResponse,
     coordinates: { lat: number; lng: number },
-    serviceType: string
+    serviceType: string,
+    address?: string
   ) => {
     setLoadingSearch(false);
     
     if (serviceType === "cata-bagulho") {
       setSearchResults(results as CataBagulhoResult[]);
       setFeirasResults([]);
+      setColetaLixoResults(undefined);
     } else if (serviceType === "feiras-livres") {
       setFeirasResults(results as FeiraLivre[]);
       setSearchResults([]);
+      setColetaLixoResults(undefined);
+    } else if (serviceType === "coleta-lixo") {
+      setColetaLixoResults(results as ColetaLixoResponse);
+      setSearchResults([]);
+      setFeirasResults([]);
     }
     setUserCoordinates(coordinates);
+    setUserAddress(address || "");
     setCurrentServiceType(serviceType);
     setTrechoCoordinates(null); // Limpa trecho anterior
     setSelectedFeiraId(undefined); // Limpa seleção de feira anterior
@@ -188,14 +202,15 @@ function BuscarPageContent() {
               </Card>
             )}
 
-            {!loadingSearch && (searchResults.length > 0 || feirasResults.length > 0) && (
+            {!loadingSearch && (searchResults.length > 0 || feirasResults.length > 0 || coletaLixoResults) && (
               <Card padding="md">
                 <h2 className="text-2xl font-bold text-dark-primary mb-4">
-                  Resultados Encontrados ({searchResults.length + feirasResults.length})
+                  Resultados Encontrados ({searchResults.length + feirasResults.length + (coletaLixoResults ? 1 : 0)})
                 </h2>
                 <ServicesList
                   services={searchResults}
                   feiras={feirasResults}
+                  coletaLixo={coletaLixoResults}
                   serviceType={currentServiceType}
                   onViewTrecho={handleVerTrecho}
                   selectedFeiraId={selectedFeiraId}
@@ -203,14 +218,14 @@ function BuscarPageContent() {
               </Card>
             )}
 
-            {!loadingSearch && searchResults.length === 0 && feirasResults.length === 0 && !error && (
+            {!loadingSearch && searchResults.length === 0 && feirasResults.length === 0 && !coletaLixoResults && !error && (
               <Card padding="lg" className="text-center">
                 <div className="text-6xl mb-4">🔍</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   Faça uma busca
                 </h3>
                 <p className="text-gray-600">
-                  Digite seu CEP e número para encontrar {selectedService === "cata-bagulho" ? "serviços de Cata-Bagulho" : "feiras livres"} na sua região.
+                  Digite seu CEP e número para encontrar {selectedService === "cata-bagulho" ? "serviços de Cata-Bagulho" : selectedService === "feiras-livres" ? "feiras livres" : "informações de coleta de lixo"} na sua região.
                 </p>
               </Card>
             )}
@@ -234,6 +249,7 @@ function BuscarPageContent() {
                 <MapView
                   center={[userCoordinates.lat, userCoordinates.lng]}
                   userLocation={[userCoordinates.lat, userCoordinates.lng]}
+                  userAddress={userAddress}
                   trechoCoordinates={trechoCoordinates}
                   className="sticky top-4"
                   isFeira={currentServiceType === "feiras-livres"}

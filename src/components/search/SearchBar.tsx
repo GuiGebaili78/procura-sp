@@ -11,13 +11,15 @@ import { searchCataBagulho } from "../../services/api";
 import { formatCep } from "../../utils/validators";
 import { CataBagulhoResult } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
+import { ColetaLixoResponse } from "../../types/coletaLixo";
 
 interface SearchBarProps {
   selectedService: string;
   onSearchResults: (
-    results: CataBagulhoResult[] | FeiraLivre[],
+    results: CataBagulhoResult[] | FeiraLivre[] | ColetaLixoResponse,
     coordinates: { lat: number; lng: number },
-    serviceType: string
+    serviceType: string,
+    address?: string
   ) => void;
   onError: (error: string) => void;
   onSearchStart?: () => void;
@@ -114,6 +116,7 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
       let coordinates: { lat: number; lng: number } | null = null;
       
       try {
+        console.log("🔍 Tentando geocoding para:", enderecoCompleto);
         const geocodeResults = await geocodeAddress(enderecoCompleto);
         if (geocodeResults && geocodeResults.length > 0) {
           coordinates = {
@@ -121,8 +124,23 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
             lng: parseFloat(geocodeResults[0].lon)
           };
           console.log("✅ Coordenadas reais obtidas via geocoding:", coordinates);
+        } else {
+          console.log("⚠️ Geocoding retornou resultado vazio, usando coordenadas aproximadas por CEP");
+          coordinates = obterCoordenadasAproximadasPorCEP(cep);
         }
-      } catch {
+      } catch (error) {
+        console.error("❌ Erro no geocoding:", error);
+        if (error instanceof Error) {
+          if (error.message.includes('timeout')) {
+            console.log("⏰ Timeout no geocoding - endereço pode estar incorreto ou serviço indisponível");
+            onError("O endereço informado pode estar incorreto ou o serviço de localização está indisponível. Verifique o CEP e número.");
+            return;
+          } else if (error.message.includes('404') || error.message.includes('Not Found')) {
+            console.log("📍 Endereço não encontrado no geocoding");
+            onError("Endereço não encontrado. Verifique se o CEP e número estão corretos.");
+            return;
+          }
+        }
         console.log("⚠️ Geocoding falhou, usando coordenadas aproximadas por CEP");
         coordinates = obterCoordenadasAproximadasPorCEP(cep);
       }
@@ -154,7 +172,8 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
         }
 
         console.log("✅ [SearchBar] Enviando resultados para o componente pai");
-        onSearchResults(results, coordinates, "cata-bagulho");
+        const enderecoCompleto = `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
+        onSearchResults(results, coordinates, "cata-bagulho", enderecoCompleto);
       } else if (selectedService === "feiras-livres") {
         const response = await fetch('/api/feiras', {
           method: 'POST',
@@ -178,7 +197,33 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
           return;
         }
 
-        onSearchResults(data.data.feiras, coordinates, "feiras-livres");
+        const enderecoCompleto = `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
+        onSearchResults(data.data.feiras, coordinates, "feiras-livres", enderecoCompleto);
+      } else if (selectedService === "coleta-lixo") {
+        const response = await fetch('/api/coleta-lixo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            endereco: `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`,
+            numero,
+            latitude: coordinates.lat,
+            longitude: coordinates.lng
+          })
+        });
+
+        const data = await response.json();
+
+        if (!data.success || !data.data) {
+          setNoResultsMessage(
+            "Nenhuma informação de coleta de lixo encontrada para este endereço.",
+          );
+          return;
+        }
+
+        const enderecoCompleto = `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
+        onSearchResults(data.data, coordinates, "coleta-lixo", enderecoCompleto);
       }
     } catch (error) {
       const message =

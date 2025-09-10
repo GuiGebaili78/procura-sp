@@ -88,7 +88,7 @@ export default function ServicosPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-gray-500">
-                    {service.value === "cata-bagulho" ? (
+                    {service.value === "cata-bagulho" || service.value === "coleta-lixo" ? (
                       <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
                         ✅ Disponível
                       </span>
@@ -98,9 +98,9 @@ export default function ServicosPage() {
                       </span>
                     )}
                   </div>
-                  {service.value === "cata-bagulho" && (
+                  {(service.value === "cata-bagulho" || service.value === "coleta-lixo") && (
                     <LinkButton
-                      href="/buscar"
+                      href={service.value === "cata-bagulho" ? "/buscar" : "/buscar?service=coleta-lixo"}
                       variant="primary"
                       size="sm"
                       className="rounded-full"
