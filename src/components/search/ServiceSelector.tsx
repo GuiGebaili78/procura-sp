@@ -33,6 +33,9 @@ export function ServiceSelector({
           <option value="coleta-lixo">
             {SERVICE_ICONS["coleta-lixo"]} Coleta de Lixo
           </option>
+          <option value="saude">
+            {SERVICE_ICONS["saude"]} Saúde Pública
+          </option>
         </select>
       </div>
 
@@ -65,6 +68,19 @@ export function ServiceSelector({
                 <li>Horários e dias específicos</li>
                 <li>Localização precisa no mapa</li>
                 <li>Informações atualizadas</li>
+              </ul>
+            </div>
+          ) : selectedService === "saude" ? (
+            <div>
+              <p className="mb-2">
+                <strong>Saúde Pública:</strong> Encontre estabelecimentos de
+                saúde próximos ao seu endereço.
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>UBS, hospitais e postos de saúde</li>
+                <li>Farmácias populares</li>
+                <li>Maternidades e unidades de urgência</li>
+                <li>Dados oficiais do CNES</li>
               </ul>
             </div>
           ) : (

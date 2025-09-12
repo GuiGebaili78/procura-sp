@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "start http://localhost:3000",
+    "dev": "start http://localhost:3000 && docker-compose up -d",
     "dev:only": "next dev --turbopack",
     "dev:db": "docker-compose up -d && echo '⏳ Aguardando banco subir...' && timeout /t 10 /nobreak > nul",
     "build": "next build",
@@ -16,7 +16,7 @@
     "generate:structure": "npx ts-node gerar_estrutura.ts",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down -v",
-    "docker:restart": "docker-compose down -v && docker-compose up -d",
+    "docker:restart": "docker-compose down && docker-compose up -d",
     "docker:reset": "docker-compose down -v && docker system prune -a --volumes -f && docker-compose build --no-cache && docker-compose up -d && echo '⏳ Aguardando banco e app subirem...' && timeout /t 30 /nobreak && echo '🚀 Executando migrações...' && curl http://localhost:3000/api/migrate",
     "setup:env": "node create-env.js",
     "migrate": "curl http://localhost:3000/api/migrate",
@@ -34,7 +34,8 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-icons": "^5.5.0",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

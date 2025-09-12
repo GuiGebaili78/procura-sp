@@ -10,6 +10,7 @@ import { Layout } from "../../components/layout/Layout";
 import { CataBagulhoResult, TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
+import { EstabelecimentoSaude } from "../../types/saude";
 import { fetchTrechoCoordinates } from "../../services/trechoService";
 import { Card } from "../../components/ui/Card";
 import { FeirasSkeletonLoading, CataBagulhoSkeletonLoading } from "../../components/ui/SkeletonLoading";
@@ -42,10 +43,11 @@ function BuscarPageContent() {
   const [searchResults, setSearchResults] = useState<CataBagulhoResult[]>([]);
   const [feirasResults, setFeirasResults] = useState<FeiraLivre[]>([]);
   const [coletaLixoResults, setColetaLixoResults] = useState<ColetaLixoResponse | undefined>(undefined);
+  const [saudeResults, setSaudeResults] = useState<EstabelecimentoSaude[]>([]);
   const [userCoordinates, setUserCoordinates] = useState<{
     lat: number;
     lng: number;
-  } | null>(null);
+  } | undefined>(undefined);
   const [userAddress, setUserAddress] = useState<string>("");
   const [trechoCoordinates, setTrechoCoordinates] =
     useState<TrechoCoordinates | null>(null);
@@ -66,11 +68,14 @@ function BuscarPageContent() {
     } else if (serviceParam === 'coleta-lixo') {
       setSelectedService('coleta-lixo');
       setCurrentServiceType('coleta-lixo');
+    } else if (serviceParam === 'saude') {
+      setSelectedService('saude');
+      setCurrentServiceType('saude');
     }
   }, [searchParams]);
 
   const handleSearchResults = (
-    results: CataBagulhoResult[] | FeiraLivre[] | ColetaLixoResponse,
+    results: CataBagulhoResult[] | FeiraLivre[] | ColetaLixoResponse | EstabelecimentoSaude[],
     coordinates: { lat: number; lng: number },
     serviceType: string,
     address?: string
@@ -81,14 +86,22 @@ function BuscarPageContent() {
       setSearchResults(results as CataBagulhoResult[]);
       setFeirasResults([]);
       setColetaLixoResults(undefined);
+      setSaudeResults([]);
     } else if (serviceType === "feiras-livres") {
       setFeirasResults(results as FeiraLivre[]);
       setSearchResults([]);
       setColetaLixoResults(undefined);
+      setSaudeResults([]);
     } else if (serviceType === "coleta-lixo") {
       setColetaLixoResults(results as ColetaLixoResponse);
       setSearchResults([]);
       setFeirasResults([]);
+      setSaudeResults([]);
+    } else if (serviceType === "saude") {
+      setSaudeResults(results as EstabelecimentoSaude[]);
+      setSearchResults([]);
+      setFeirasResults([]);
+      setColetaLixoResults(undefined);
     }
     setUserCoordinates(coordinates);
     setUserAddress(address || "");
@@ -181,98 +194,147 @@ function BuscarPageContent() {
           onSearchResults={handleSearchResults}
           onError={handleError}
           onSearchStart={handleSearchStart}
+          currentCoordinates={userCoordinates}
+          currentAddress={userAddress}
         />
 
-        <div
-          id="resultados-section"
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-        >
-          {/* Coluna dos Resultados */}
+        {/* Para Saúde Pública: mostrar apenas o mapa */}
+        {currentServiceType === "saude" ? (
           <div className="space-y-6">
             {loadingSearch && (
               <Card padding="md">
                 <h2 className="text-2xl font-bold text-dark-primary mb-4">
-                  Buscando...
+                  Buscando estabelecimentos de saúde...
                 </h2>
-                {currentServiceType === "feiras-livres" ? (
-                  <FeirasSkeletonLoading />
-                ) : (
-                  <CataBagulhoSkeletonLoading />
-                )}
+                <div className="flex items-center justify-center py-8">
+                  <div className="spinner w-8 h-8"></div>
+                </div>
               </Card>
             )}
 
-            {!loadingSearch && (searchResults.length > 0 || feirasResults.length > 0 || coletaLixoResults) && (
-              <Card padding="md">
-                <h2 className="text-2xl font-bold text-dark-primary mb-4">
-                  Resultados Encontrados ({searchResults.length + feirasResults.length + (coletaLixoResults ? 1 : 0)})
-                </h2>
-                <ServicesList
-                  services={searchResults}
-                  feiras={feirasResults}
-                  coletaLixo={coletaLixoResults}
-                  serviceType={currentServiceType}
-                  onViewTrecho={handleVerTrecho}
-                  selectedFeiraId={selectedFeiraId}
-                />
-              </Card>
-            )}
-
-            {!loadingSearch && searchResults.length === 0 && feirasResults.length === 0 && !coletaLixoResults && !error && (
-              <Card padding="lg" className="text-center">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Faça uma busca
-                </h3>
-                <p className="text-gray-600">
-                  Digite seu CEP e número para encontrar {selectedService === "cata-bagulho" ? "serviços de Cata-Bagulho" : selectedService === "feiras-livres" ? "feiras livres" : "informações de coleta de lixo"} na sua região.
-                </p>
-              </Card>
-            )}
-          </div>
-
-          {/* Coluna do Mapa */}
-          <div className="space-y-6">
             {userCoordinates && (
-              <>
-                {loadingTrecho && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                    <div className="flex items-center">
-                      <div className="spinner w-4 h-4 mr-3"></div>
-                      <p className="text-blue-700 font-medium">
-                        Carregando trecho...
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <MapView
-                  center={[userCoordinates.lat, userCoordinates.lng]}
-                  userLocation={[userCoordinates.lat, userCoordinates.lng]}
-                  userAddress={userAddress}
-                  trechoCoordinates={trechoCoordinates}
-                  className="sticky top-4"
-                  isFeira={currentServiceType === "feiras-livres"}
-                  feiras={currentServiceType === "feiras-livres" ? feirasResults : []}
-                  selectedFeiraId={selectedFeiraId}
-                />
-                
-              </>
+              <MapView
+                center={[userCoordinates.lat, userCoordinates.lng]}
+                userLocation={[userCoordinates.lat, userCoordinates.lng]}
+                userAddress={userAddress}
+                trechoCoordinates={trechoCoordinates}
+                className="w-full h-[600px]"
+                isFeira={false}
+                feiras={[]}
+                selectedFeiraId={undefined}
+                isSaude={true}
+                estabelecimentosSaude={saudeResults}
+              />
             )}
 
-            {!userCoordinates && (
+            {!userCoordinates && !loadingSearch && (
               <Card padding="lg" className="text-center">
-                <div className="text-6xl mb-4">🗺️</div>
+                <div className="text-6xl mb-4">🏥</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Mapa da Região
+                  Estabelecimentos de Saúde
                 </h3>
                 <p className="text-gray-600">
-                  O mapa será exibido aqui após você fazer uma busca.
+                  Digite seu CEP e número para encontrar estabelecimentos de saúde na sua região.
                 </p>
               </Card>
             )}
           </div>
-        </div>
+        ) : (
+          /* Para outros serviços: layout original com cartões */
+          <div
+            id="resultados-section"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+          >
+            {/* Coluna dos Resultados */}
+            <div className="space-y-6">
+              {loadingSearch && (
+                <Card padding="md">
+                  <h2 className="text-2xl font-bold text-dark-primary mb-4">
+                    Buscando...
+                  </h2>
+                  {currentServiceType === "feiras-livres" ? (
+                    <FeirasSkeletonLoading />
+                  ) : (
+                    <CataBagulhoSkeletonLoading />
+                  )}
+                </Card>
+              )}
+
+              {!loadingSearch && (searchResults.length > 0 || feirasResults.length > 0 || coletaLixoResults) && (
+                <Card padding="md">
+                  <h2 className="text-2xl font-bold text-dark-primary mb-4">
+                    Resultados Encontrados ({searchResults.length + feirasResults.length + (coletaLixoResults ? 1 : 0)})
+                  </h2>
+                  <ServicesList
+                    services={searchResults}
+                    feiras={feirasResults}
+                    coletaLixo={coletaLixoResults}
+                    estabelecimentosSaude={[]}
+                    serviceType={currentServiceType}
+                    onViewTrecho={handleVerTrecho}
+                    selectedFeiraId={selectedFeiraId}
+                  />
+                </Card>
+              )}
+
+              {!loadingSearch && searchResults.length === 0 && feirasResults.length === 0 && !coletaLixoResults && !error && (
+                <Card padding="lg" className="text-center">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Faça uma busca
+                  </h3>
+                  <p className="text-gray-600">
+                    Digite seu CEP e número para encontrar {selectedService === "cata-bagulho" ? "serviços de Cata-Bagulho" : selectedService === "feiras-livres" ? "feiras livres" : "informações de coleta de lixo"} na sua região.
+                  </p>
+                </Card>
+              )}
+            </div>
+
+            {/* Coluna do Mapa */}
+            <div className="space-y-6">
+              {userCoordinates && (
+                <>
+                  {loadingTrecho && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                      <div className="flex items-center">
+                        <div className="spinner w-4 h-4 mr-3"></div>
+                        <p className="text-blue-700 font-medium">
+                          Carregando trecho...
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <MapView
+                    center={[userCoordinates.lat, userCoordinates.lng]}
+                    userLocation={[userCoordinates.lat, userCoordinates.lng]}
+                    userAddress={userAddress}
+                    trechoCoordinates={trechoCoordinates}
+                    className="sticky top-4"
+                    isFeira={currentServiceType === "feiras-livres"}
+                    feiras={currentServiceType === "feiras-livres" ? feirasResults : []}
+                    selectedFeiraId={selectedFeiraId}
+                    isSaude={false}
+                    estabelecimentosSaude={[]}
+                  />
+                  
+                </>
+              )}
+
+              {!userCoordinates && (
+                <Card padding="lg" className="text-center">
+                  <div className="text-6xl mb-4">🗺️</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Mapa da Região
+                  </h3>
+                  <p className="text-gray-600">
+                    O mapa será exibido aqui após você fazer uma busca.
+                  </p>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

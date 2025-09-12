@@ -1,20 +1,23 @@
 import { ServiceCard } from "./ServiceCard";
 import { FeirasList } from "./FeirasList";
 import { ColetaLixoList } from "./ColetaLixoList";
+import { HealthList } from "../health/HealthList";
 import { CataBagulhoResult } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
+import { EstabelecimentoSaude } from "../../types/saude";
 
 interface ServicesListProps {
   services?: CataBagulhoResult[];
   feiras?: FeiraLivre[];
   coletaLixo?: ColetaLixoResponse;
+  estabelecimentosSaude?: EstabelecimentoSaude[];
   serviceType?: string;
   onViewTrecho?: (trechoId: string) => void;
   selectedFeiraId?: string;
 }
 
-export function ServicesList({ services, feiras, coletaLixo, serviceType, onViewTrecho, selectedFeiraId }: ServicesListProps) {
+export function ServicesList({ services, feiras, coletaLixo, estabelecimentosSaude, serviceType, onViewTrecho, selectedFeiraId }: ServicesListProps) {
   // Se for feiras livres, usar o componente específico
   if (serviceType === "feiras-livres" && feiras) {
     return <FeirasList feiras={feiras} onViewTrecho={onViewTrecho} selectedFeiraId={selectedFeiraId} />;
@@ -23,6 +26,11 @@ export function ServicesList({ services, feiras, coletaLixo, serviceType, onView
   // Se for coleta de lixo, usar o componente específico
   if (serviceType === "coleta-lixo" && coletaLixo) {
     return <ColetaLixoList coletaComum={coletaLixo.coletaComum} coletaSeletiva={coletaLixo.coletaSeletiva} />;
+  }
+
+  // Se for saúde, usar o componente específico
+  if (serviceType === "saude" && estabelecimentosSaude) {
+    return <HealthList estabelecimentos={estabelecimentosSaude} />;
   }
 
   // Se for cata-bagulho ou outros serviços

@@ -50,8 +50,8 @@ export default function ServicosPage() {
                   )}
                   {service.value === "saude" && (
                     <p>
-                      Localização de unidades básicas de saúde, hospitais e
-                      centros médicos próximos.
+                      Localização de unidades básicas de saúde, hospitais, AMAs,
+                      CAPS e centros médicos próximos com filtros por tipo e esfera administrativa.
                     </p>
                   )}
                   {service.value === "vacinacao" && (
@@ -88,7 +88,7 @@ export default function ServicosPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-gray-500">
-                    {service.value === "cata-bagulho" || service.value === "coleta-lixo" ? (
+                    {service.value === "cata-bagulho" || service.value === "coleta-lixo" || service.value === "saude" ? (
                       <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
                         ✅ Disponível
                       </span>
@@ -98,9 +98,11 @@ export default function ServicosPage() {
                       </span>
                     )}
                   </div>
-                  {(service.value === "cata-bagulho" || service.value === "coleta-lixo") && (
+                  {(service.value === "cata-bagulho" || service.value === "coleta-lixo" || service.value === "saude") && (
                     <LinkButton
-                      href={service.value === "cata-bagulho" ? "/buscar" : "/buscar?service=coleta-lixo"}
+                      href={service.value === "cata-bagulho" ? "/buscar" : 
+                            service.value === "coleta-lixo" ? "/buscar?service=coleta-lixo" :
+                            "/buscar?service=saude"}
                       variant="primary"
                       size="sm"
                       className="rounded-full"

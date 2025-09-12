@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -14,6 +14,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import { TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
+import { EstabelecimentoSaude, TIPOS_ESTABELECIMENTO } from "../../types/saude";
 
 // Ícones customizados
 const createCustomIcon = (color: string) =>
@@ -32,6 +33,7 @@ const createCustomIcon = (color: string) =>
 const userLocationIcon = createCustomIcon("#00ADB5");
 const trechoIcon = createCustomIcon("#FF6B6B");
 
+
 interface MapViewProps {
   center: LatLngTuple;
   userLocation?: LatLngTuple;
@@ -41,6 +43,8 @@ interface MapViewProps {
   isFeira?: boolean;
   feiras?: FeiraLivre[];
   selectedFeiraId?: string;
+  isSaude?: boolean;
+  estabelecimentosSaude?: EstabelecimentoSaude[];
 }
 
 // Componente para gerenciar rotas (temporariamente desabilitado)
@@ -62,16 +66,35 @@ function MapController({
   trechoCoordinates,
   feiras = [],
   isFeira = false,
+  estabelecimentosSaude = [],
+  isSaude = false,
 }: {
   userLocation?: LatLngTuple;
   trechoCoordinates?: TrechoCoordinates | null;
   feiras?: FeiraLivre[];
   isFeira?: boolean;
+  estabelecimentosSaude?: EstabelecimentoSaude[];
+  isSaude?: boolean;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    if (isFeira && feiras.length > 0) {
+    if (isSaude && estabelecimentosSaude.length > 0) {
+      // Para saúde, ajustar para mostrar todos os estabelecimentos e o usuário
+      const bounds = new LatLngBounds([]);
+      
+      if (userLocation) {
+        bounds.extend(userLocation);
+      }
+      
+      estabelecimentosSaude.forEach(estabelecimento => {
+        bounds.extend([estabelecimento.coordenadas.lat, estabelecimento.coordenadas.lng]);
+      });
+      
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [20, 20] });
+      }
+    } else if (isFeira && feiras.length > 0) {
       // Para feiras, ajustar para mostrar todas as feiras e o usuário
       const bounds = new LatLngBounds([]);
       
@@ -112,7 +135,7 @@ function MapController({
       // Se apenas tem localização do usuário, centraliza nela
       map.setView(userLocation, 16);
     }
-  }, [map, userLocation, trechoCoordinates, feiras, isFeira]);
+  }, [map, userLocation, trechoCoordinates, feiras, isFeira, estabelecimentosSaude, isSaude]);
 
   return null;
 }
@@ -126,6 +149,8 @@ export function MapView({
   isFeira = false,
   feiras = [],
   selectedFeiraId,
+  isSaude = false,
+  estabelecimentosSaude = [],
 }: MapViewProps) {
   // Fix para ícones do Leaflet no Next.js
   useEffect(() => {
@@ -173,6 +198,8 @@ export function MapView({
             trechoCoordinates={trechoCoordinates}
             feiras={feiras}
             isFeira={isFeira}
+            estabelecimentosSaude={estabelecimentosSaude}
+            isSaude={isSaude}
           />
 
           {/* Controlador para rotas */}
@@ -220,6 +247,58 @@ export function MapView({
                     <strong>🛒 {feira.nome}</strong>
                     <br />
                     <small>{feira.diaSemana}</small>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+
+          {/* Marcadores dos estabelecimentos de saúde */}
+          {isSaude && estabelecimentosSaude.map((estabelecimento) => {
+            // Determinar o tipo e cor do estabelecimento
+            const getTipoInfo = () => {
+              const tipoMap: Record<string, keyof typeof TIPOS_ESTABELECIMENTO> = {
+                "05": "UBS",
+                "01": "HOSPITAL", 
+                "02": "POSTO",
+                "03": "FARMACIA",
+                "04": "MATERNIDADE",
+                "06": "URGENCIA",
+                "07": "ACADEMIA",
+                "08": "CAPS",
+                "09": "SAUDE_BUCAL",
+                "10": "DOENCAS_RARAS"
+              };
+              
+              const tipo = tipoMap[estabelecimento.tipoCodigo] || "UBS";
+              return TIPOS_ESTABELECIMENTO[tipo];
+            };
+
+            const tipoInfo = getTipoInfo();
+            
+            return (
+              <Marker 
+                key={estabelecimento.id} 
+                position={[estabelecimento.coordenadas.lat, estabelecimento.coordenadas.lng]} 
+                icon={createCustomIcon(tipoInfo.cor)}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <strong>{tipoInfo.icone} {estabelecimento.nome}</strong>
+                    <br />
+                    <small>{tipoInfo.nome}</small>
+                    <br />
+                    <small className="text-gray-600">{estabelecimento.endereco}</small>
+                    {estabelecimento.distancia && (
+                      <>
+                        <br />
+                        <small className="text-blue-600">
+                          📍 {estabelecimento.distancia < 1000 
+                            ? `${Math.round(estabelecimento.distancia)}m` 
+                            : `${(estabelecimento.distancia / 1000).toFixed(1)}km`}
+                        </small>
+                      </>
+                    )}
                   </div>
                 </Popup>
               </Marker>

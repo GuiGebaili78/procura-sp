@@ -12,20 +12,25 @@ import { formatCep } from "../../utils/validators";
 import { CataBagulhoResult } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
+import { EstabelecimentoSaude, FiltroSaude } from "../../types/saude";
+import { HealthLayerSelector } from "../health/HealthLayerSelector";
 
 interface SearchBarProps {
   selectedService: string;
   onSearchResults: (
-    results: CataBagulhoResult[] | FeiraLivre[] | ColetaLixoResponse,
+    results: CataBagulhoResult[] | FeiraLivre[] | ColetaLixoResponse | EstabelecimentoSaude[],
     coordinates: { lat: number; lng: number },
     serviceType: string,
     address?: string
   ) => void;
   onError: (error: string) => void;
   onSearchStart?: () => void;
+  // Para filtros em tempo real
+  currentCoordinates?: { lat: number; lng: number };
+  currentAddress?: string;
 }
 
-export function SearchBar({ selectedService, onSearchResults, onError, onSearchStart }: SearchBarProps) {
+export function SearchBar({ selectedService, onSearchResults, onError, onSearchStart, currentCoordinates, currentAddress }: SearchBarProps) {
   const [cep, setCep] = useState("");
   const [numero, setNumero] = useState("");
   const [endereco, setEndereco] = useState({
@@ -38,8 +43,120 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState("");
   const [noResultsMessage, setNoResultsMessage] = useState("");
+  const [filtrosSaude, setFiltrosSaude] = useState<FiltroSaude>({
+    ubs: true,
+    hospitais: true,
+    postos: false,
+    farmacias: false,
+    maternidades: false,
+    urgencia: false,
+    academias: false,
+    caps: false,
+    saudeBucal: false,
+    doencasRaras: false,
+    ama: false, // Assistência Médica Ambulatorial
+    programas: false,
+    diagnostico: false,
+    ambulatorio: false,
+    supervisao: false,
+    residencia: false,
+    reabilitacao: false,
+    apoio: false,
+    clinica: false,
+    dst: false,
+    prontoSocorro: false,
+    testagem: false,
+    auditiva: false,
+    horaCerta: false,
+    idoso: false,
+    laboratorio: false,
+    trabalhador: false,
+    apoioDiagnostico: false,
+    apoioTerapeutico: false,
+    instituto: false,
+    apae: false,
+    referencia: false,
+    imagem: false,
+    nutricao: false,
+    reabilitacaoGeral: false,
+    nefrologia: false,
+    odontologica: false,
+    saudeMental: false,
+    referenciaGeral: false,
+    medicinas: false,
+    hemocentro: false,
+    zoonoses: false,
+    laboratorioZoo: false,
+    casaParto: false,
+    sexual: false,
+    dstUad: false,
+    capsInfantil: false,
+    ambulatorios: false,
+    programasGerais: false,
+    tradicionais: false,
+    dependente: false,
+    // Filtros por esfera administrativa (Público = Municipal + Estadual)
+    municipal: true, // Público (Municipal + Estadual)
+    estadual: true,  // Estadual (incluído no Público)
+    privado: true    // Privado
+  });
 
   const numeroInputRef = useRef<HTMLInputElement>(null);
+
+  // Função para buscar estabelecimentos em tempo real (após primeira busca)
+  const buscarEstabelecimentosTempoReal = async (novosFiltros: FiltroSaude) => {
+    if (selectedService !== "saude" || !cep || !numero || !endereco.logradouro) {
+      console.log('⚠️ [SearchBar] Não é possível aplicar filtros em tempo real - dados incompletos');
+      return;
+    }
+
+    try {
+      console.log('🔄 [SearchBar] Buscando estabelecimentos em tempo real...');
+      console.log('🔧 [SearchBar] Filtros:', novosFiltros);
+      
+      // Usar coordenadas atuais ou obter novas se necessário
+      let coordinates = currentCoordinates;
+      if (!coordinates) {
+        // Obter coordenadas aproximadas por CEP
+        coordinates = obterCoordenadasAproximadasPorCEP(cep);
+        console.log('📍 [SearchBar] Usando coordenadas aproximadas:', coordinates);
+      }
+      
+      if (!coordinates) {
+        console.log('⚠️ [SearchBar] Não foi possível obter coordenadas');
+        return;
+      }
+      
+      const response = await fetch('/api/saude', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cep: cep.replace(/\D/g, ''),
+          numero,
+          latitude: coordinates.lat,
+          longitude: coordinates.lng,
+          filtros: novosFiltros
+        })
+      });
+
+      const data = await response.json();
+
+      console.log('🔄 [SearchBar] Resposta da API (tempo real):', data);
+
+      if (data.success && data.estabelecimentos) {
+        console.log('✅ [SearchBar] Filtros aplicados em tempo real:', data.estabelecimentos.length, 'estabelecimentos');
+        const enderecoCompleto = `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
+        onSearchResults(data.estabelecimentos, coordinates, "saude", enderecoCompleto);
+      } else {
+        console.log('⚠️ [SearchBar] Nenhum resultado encontrado com os filtros aplicados');
+        onSearchResults([], coordinates, "saude", currentAddress);
+      }
+    } catch (error) {
+      console.error('❌ [SearchBar] Erro ao aplicar filtros em tempo real:', error);
+    }
+  };
 
   const handleCepChange = async (value: string) => {
     const formatted = formatCep(value);
@@ -126,30 +243,23 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
           console.log("✅ Coordenadas reais obtidas via geocoding:", coordinates);
         } else {
           console.log("⚠️ Geocoding retornou resultado vazio, usando coordenadas aproximadas por CEP");
-          coordinates = obterCoordenadasAproximadasPorCEP(cep);
+          coordinates = obterCoordenadasAproximadasPorCEP(cep) || null;
         }
       } catch (error) {
         console.error("❌ Erro no geocoding:", error);
-        if (error instanceof Error) {
-          if (error.message.includes('timeout')) {
-            console.log("⏰ Timeout no geocoding - endereço pode estar incorreto ou serviço indisponível");
-            onError("O endereço informado pode estar incorreto ou o serviço de localização está indisponível. Verifique o CEP e número.");
-            return;
-          } else if (error.message.includes('404') || error.message.includes('Not Found')) {
-            console.log("📍 Endereço não encontrado no geocoding");
-            onError("Endereço não encontrado. Verifique se o CEP e número estão corretos.");
-            return;
-          }
-        }
         console.log("⚠️ Geocoding falhou, usando coordenadas aproximadas por CEP");
-        coordinates = obterCoordenadasAproximadasPorCEP(cep);
+        coordinates = obterCoordenadasAproximadasPorCEP(cep) || null;
+        console.log("📍 Coordenadas aproximadas obtidas:", coordinates);
       }
       
       if (!coordinates) {
+        console.error("❌ Nenhuma coordenada obtida, nem por geocoding nem por fallback");
         throw new Error(
           "Não foi possível encontrar as coordenadas do endereço. Verifique se o CEP e número estão corretos.",
         );
       }
+      
+      console.log("✅ Coordenadas finais obtidas:", coordinates);
 
       console.log("✅ Coordenadas finais:", coordinates);
 
@@ -224,6 +334,35 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
 
         const enderecoCompleto = `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
         onSearchResults(data.data, coordinates, "coleta-lixo", enderecoCompleto);
+      } else if (selectedService === "saude") {
+        const response = await fetch('/api/saude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            cep: cep.replace(/\D/g, ''),
+            numero,
+            latitude: coordinates.lat,
+            longitude: coordinates.lng,
+            filtros: filtrosSaude,
+            raio: 5000 // 5km
+          })
+        });
+
+        const data = await response.json();
+
+        console.log('🔍 [SearchBar] Resposta da API de saúde:', data);
+
+        if (!data.success || !data.estabelecimentos || data.estabelecimentos.length === 0) {
+          setNoResultsMessage(
+            "Nenhum estabelecimento de saúde encontrado para este endereço.",
+          );
+          return;
+        }
+
+        const enderecoCompleto = `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
+        onSearchResults(data.estabelecimentos, coordinates, "saude", enderecoCompleto);
       }
     } catch (error) {
       const message =
@@ -242,7 +381,7 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
   };
 
   // Método para obter coordenadas aproximadas baseadas no CEP
-  const obterCoordenadasAproximadasPorCEP = (cep: string): { lat: number; lng: number } | null => {
+  const obterCoordenadasAproximadasPorCEP = (cep: string): { lat: number; lng: number } | undefined => {
     const cepNumerico = cep.replace(/\D/g, '');
     
     // Coordenadas mais precisas por região de São Paulo baseadas no CEP
@@ -288,7 +427,7 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
   return (
     <Card padding="md" className="mb-6">
       <h2 className="text-2xl font-bold text-dark-primary mb-6">
-        Buscar {selectedService === "cata-bagulho" ? "Cata-Bagulho" : "Feiras Livres"}
+        Buscar {selectedService === "cata-bagulho" ? "Cata-Bagulho" : selectedService === "feiras-livres" ? "Feiras Livres" : selectedService === "coleta-lixo" ? "Coleta de Lixo" : "Saúde Pública"}
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -358,6 +497,20 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
               variant="filled"
             />
           </div>
+        </div>
+      )}
+
+      {/* Filtros de Saúde */}
+      {selectedService === "saude" && (
+        <div className="mb-6">
+          <HealthLayerSelector
+            filtros={filtrosSaude}
+            onFiltroChange={(novosFiltros) => {
+              setFiltrosSaude(novosFiltros);
+              // Aplicar filtros em tempo real se já tiver coordenadas
+              buscarEstabelecimentosTempoReal(novosFiltros);
+            }}
+          />
         </div>
       )}
 
