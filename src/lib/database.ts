@@ -11,11 +11,11 @@ function getEnvironmentConfig() {
     // Produção: Vercel + Neon
     console.log("🌍 Ambiente: PRODUÇÃO (Vercel + Neon)");
     return {
-      host: process.env.NEON_HOST,
-      port: 5432,
-      user: process.env.NEON_USER,
-      database: process.env.NEON_DATABASE,
-      password: process.env.NEON_PASSWORD,
+      host: process.env.POSTGRES_HOST,
+      port: Number(process.env.POSTGRES_PORT) || 5432,
+      user: process.env.POSTGRES_USER,
+      database: process.env.POSTGRES_DB,
+      password: process.env.POSTGRES_PASSWORD,
       ssl: { rejectUnauthorized: false },
     };
   } else {
@@ -39,6 +39,16 @@ function getEnvironmentConfig() {
 }
 
 const dbConfig = getEnvironmentConfig();
+
+// Log da configuração (sem senha)
+console.log("🔧 Configuração do banco:", {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  user: dbConfig.user,
+  database: dbConfig.database,
+  ssl: dbConfig.ssl ? "habilitado" : "desabilitado"
+});
+
 const pool = new Pool(dbConfig);
 
 async function query(
