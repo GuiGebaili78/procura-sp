@@ -9,14 +9,38 @@ const { execSync } = require('child_process');
 console.log('🚀 Iniciando build da Vercel...');
 
 try {
-  // 1. Executar migrações diretamente
+  // 1. Executar migrações via API (mais confiável)
   console.log('🔄 Executando migrações do banco...');
   
-  // Executar migrações usando ts-node diretamente
-  execSync('npx ts-node -e "import(\'./src/lib/migrations.ts\').then(m => m.runMigrations()).catch(e => { console.error(\'Erro:\', e); process.exit(1); })"', {
+  // Criar um servidor temporário para executar migrações
+  const fs = require('fs');
+  const path = require('path');
+  
+  const migrationScript = `
+    import { runMigrations } from './src/lib/migrations.ts';
+    
+    runMigrations()
+      .then(() => {
+        console.log('✅ Migrações executadas com sucesso!');
+        process.exit(0);
+      })
+      .catch((error) => {
+        console.error('❌ Erro nas migrações:', error);
+        process.exit(1);
+      });
+  `;
+  
+  // Escrever script temporário
+  fs.writeFileSync('temp-migrate.mjs', migrationScript);
+  
+  // Executar migrações
+  execSync('node temp-migrate.mjs', { 
     stdio: 'inherit',
     cwd: process.cwd()
   });
+  
+  // Limpar arquivo temporário
+  fs.unlinkSync('temp-migrate.mjs');
   
   console.log('✅ Migrações concluídas!');
   
