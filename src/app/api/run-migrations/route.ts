@@ -12,7 +12,7 @@ export async function POST() {
     
     return NextResponse.json({
       success: true,
-      message: "Migrações executadas com sucesso",
+      message: "Migraçõess executadas com sucesso",
       result,
       timestamp: new Date().toISOString()
     });
