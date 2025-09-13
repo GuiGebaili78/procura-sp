@@ -10,18 +10,6 @@ function getEnvironmentConfig() {
   if (isProduction || isVercel) {
     // Produção: Vercel + Neon
     console.log("🌍 Ambiente: PRODUÇÃO (Vercel + Neon)");
-    
-    // Priorizar DATABASE_URL se disponível
-    if (process.env.DATABASE_URL) {
-      console.log("🔗 Usando DATABASE_URL para conexão");
-      return {
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-      };
-    }
-    
-    // Fallback para variáveis separadas
-    console.log("🔧 Usando variáveis separadas para conexão");
     return {
       host: process.env.POSTGRES_HOST,
       port: Number(process.env.POSTGRES_PORT) || 5432,
@@ -53,17 +41,13 @@ function getEnvironmentConfig() {
 const dbConfig = getEnvironmentConfig();
 
 // Log da configuração (sem senha)
-if (dbConfig.connectionString) {
-  console.log("🔧 Configuração do banco: DATABASE_URL (string de conexão)");
-} else {
-  console.log("🔧 Configuração do banco:", {
-    host: dbConfig.host,
-    port: dbConfig.port,
-    user: dbConfig.user,
-    database: dbConfig.database,
-    ssl: dbConfig.ssl ? "habilitado" : "desabilitado"
-  });
-}
+console.log("🔧 Configuração do banco:", {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  user: dbConfig.user,
+  database: dbConfig.database,
+  ssl: dbConfig.ssl ? "habilitado" : "desabilitado"
+});
 
 const pool = new Pool(dbConfig);
 
