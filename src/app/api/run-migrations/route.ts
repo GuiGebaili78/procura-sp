@@ -18,7 +18,7 @@ export async function POST() {
     });
     
   } catch (error) {
-    console.error("❌ Erro ao executar migrações via API:", error);
+    console.error("❌ Erro ao executar as migrações via API:", error);
     
     return NextResponse.json({
       success: false,
