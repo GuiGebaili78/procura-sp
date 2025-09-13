@@ -31,12 +31,28 @@ export async function GET() {
     `);
     console.log("📋 Amostra de dados:", sampleTest.rows);
     
+    // Teste 5: Testar query específica que a API usa
+    const apiTest = await db.query(`
+      SELECT 
+        id, nome, tipo, endereco, bairro, regiao, cep, 
+        latitude, longitude, esfera_administrativa, ativo
+      FROM estabelecimentos_saude
+      WHERE ativo = true 
+        AND latitude IS NOT NULL 
+        AND longitude IS NOT NULL
+        AND tipo IN ('UNIDADE BASICA DE SAUDE')
+      ORDER BY nome
+      LIMIT 3
+    `);
+    console.log("🔍 Teste da query da API:", apiTest.rows);
+    
     return NextResponse.json({
       success: true,
       connection: connectionTest.rows[0],
       tableExists: tableTest.rows[0].table_exists,
       totalRecords: countTest.rows[0].total,
       sampleData: sampleTest.rows,
+      apiTestData: apiTest.rows,
       environment: {
         NODE_ENV: process.env.NODE_ENV,
         VERCEL: process.env.VERCEL,
