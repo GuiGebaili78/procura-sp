@@ -8,7 +8,7 @@
     "dev:only": "next dev --turbopack",
     "dev:db": "docker-compose up -d && echo '⏳ Aguardando banco subir...' && timeout /t 10 /nobreak > nul",
     "build": "next build",
-    "vercel-build": "next build",
+    "vercel-build": "node scripts/vercel-build.js",
     "start": "next start",
     "lint": "next lint",
     "lint:check": "prettier --check .",
@@ -20,6 +20,7 @@
     "docker:reset": "docker-compose down -v && docker system prune -a --volumes -f && docker-compose build --no-cache && docker-compose up -d && echo '⏳ Aguardando banco e app subirem...' && timeout /t 30 /nobreak && echo '🚀 Executando migrações...' && curl http://localhost:3000/api/migrate",
     "setup:env": "node create-env.js",
     "migrate": "curl http://localhost:3000/api/migrate",
+    "migrate:prod": "npx ts-node -e \"import('./src/lib/migrations.ts').then(m => m.runMigrations())\"",
     "test": "jest",
     "test:watch": "jest --watch"
   },
