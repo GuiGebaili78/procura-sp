@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { SearchBar } from "../../components/search/SearchBar";
+import { SearchBarRefactored as SearchBar } from "../../components/search/SearchBarRefactored";
 import { ServiceSelector } from "../../components/search/ServiceSelector";
 import { ServicesList } from "../../components/services/ServicesList";
 import { Layout } from "../../components/layout/Layout";
