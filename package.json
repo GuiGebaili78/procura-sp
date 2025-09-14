@@ -8,7 +8,7 @@
     "dev:only": "next dev --turbopack",
     "dev:db": "docker-compose up -d && echo '⏳ Aguardando banco subir...' && timeout /t 10 /nobreak > nul",
     "build": "next build",
-    "vercel-build": "node scripts/vercel-build.js",
+    "vercel-build": "next build",
     "start": "next start",
     "lint": "next lint",
     "lint:check": "prettier --check .",
