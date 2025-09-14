@@ -9,6 +9,13 @@ export async function GET() {
       NODE_ENV: process.env.NODE_ENV,
       VERCEL: process.env.VERCEL,
       DATABASE_URL: process.env.DATABASE_URL ? "***configurado***" : "❌ não configurado",
+      // Variáveis PostgreSQL padrão
+      PGHOST: process.env.PGHOST ? "***configurado***" : "❌ não configurado",
+      PGPORT: process.env.PGPORT ? "***configurado***" : "❌ não configurado",
+      PGUSER: process.env.PGUSER ? "***configurado***" : "❌ não configurado",
+      PGPASSWORD: process.env.PGPASSWORD ? "***configurado***" : "❌ não configurado",
+      PGDATABASE: process.env.PGDATABASE ? "***configurado***" : "❌ não configurado",
+      // Variáveis POSTGRES (fallback)
       POSTGRES_HOST: process.env.POSTGRES_HOST ? "***configurado***" : "❌ não configurado",
       POSTGRES_PORT: process.env.POSTGRES_PORT ? "***configurado***" : "❌ não configurado", 
       POSTGRES_USER: process.env.POSTGRES_USER ? "***configurado***" : "❌ não configurado",
@@ -27,22 +34,14 @@ export async function GET() {
       const { Pool } = await import("pg");
       
       // Usar a mesma lógica do arquivo principal
-      let poolConfig;
-      if (process.env.DATABASE_URL) {
-        poolConfig = {
-          connectionString: process.env.DATABASE_URL,
-          ssl: { rejectUnauthorized: false },
-        };
-      } else {
-        poolConfig = {
-          host: process.env.POSTGRES_HOST,
-          port: Number(process.env.POSTGRES_PORT) || 5432,
-          user: process.env.POSTGRES_USER,
-          database: process.env.POSTGRES_DB,
-          password: process.env.POSTGRES_PASSWORD,
-          ssl: { rejectUnauthorized: false },
-        };
-      }
+      const poolConfig = {
+        host: process.env.PGHOST,
+        port: Number(process.env.PGPORT) || 5432,
+        user: process.env.PGUSER,
+        database: process.env.PGDATABASE,
+        password: process.env.PGPASSWORD,
+        ssl: { rejectUnauthorized: false },
+      };
       
       const pool = new Pool(poolConfig);
       
@@ -50,7 +49,7 @@ export async function GET() {
       connectionTest = {
         success: true,
         data: result.rows[0],
-        connectionType: process.env.DATABASE_URL ? "DATABASE_URL" : "separate_vars"
+        connectionType: "PG_vars"
       };
       
       await pool.end();
@@ -59,7 +58,7 @@ export async function GET() {
       connectionTest = {
         success: false,
         error: error instanceof Error ? error.message : "Erro desconhecido",
-        connectionType: process.env.DATABASE_URL ? "DATABASE_URL" : "separate_vars"
+        connectionType: "PG_vars"
       };
     }
     

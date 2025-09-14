@@ -11,11 +11,11 @@ function getEnvironmentConfig() {
     // Produção: Vercel + Neon
     console.log("🌍 Ambiente: PRODUÇÃO (Vercel + Neon)");
     return {
-      host: process.env.POSTGRES_HOST,
-      port: Number(process.env.POSTGRES_PORT) || 5432,
-      user: process.env.POSTGRES_USER,
-      database: process.env.POSTGRES_DB,
-      password: process.env.POSTGRES_PASSWORD,
+      host: process.env.PGHOST,
+      port: Number(process.env.PGPORT) || 5432,
+      user: process.env.PGUSER,
+      database: process.env.PGDATABASE,
+      password: process.env.PGPASSWORD,
       ssl: { rejectUnauthorized: false },
     };
   } else {
