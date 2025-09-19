@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { runMigrations } from "../../../lib/migrations";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     console.log("🔄 Iniciando migrações em produção...");
     

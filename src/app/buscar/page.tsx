@@ -10,7 +10,7 @@ import { Layout } from "../../components/layout/Layout";
 import { CataBagulhoResult, TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
-import { EstabelecimentoSaude } from "../../types/saude";
+import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
 import { fetchTrechoCoordinates } from "../../services/trechoService";
 import { Card } from "../../components/ui/Card";
 import { FeirasSkeletonLoading, CataBagulhoSkeletonLoading } from "../../components/ui/SkeletonLoading";

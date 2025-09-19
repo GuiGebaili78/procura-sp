@@ -14,7 +14,7 @@ interface UseCepSearchReturn {
   endereco: EnderecoData;
   loadingCep: boolean;
   cepError: string;
-  handleCepChange: (value: string) => Promise<void>;
+  handleCepChange: (value: string, onCepCleared?: () => void) => Promise<void>;
   clearCep: () => void;
 }
 
@@ -29,7 +29,7 @@ export function useCepSearch(): UseCepSearchReturn {
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState("");
 
-  const handleCepChange = useCallback(async (value: string) => {
+  const handleCepChange = useCallback(async (value: string, onCepCleared?: () => void) => {
     const formatted = formatCep(value);
     setCep(formatted);
     setCepError(""); // Limpa erro anterior
@@ -42,6 +42,10 @@ export function useCepSearch(): UseCepSearchReturn {
         localidade: "",
         uf: "",
       });
+      // Chama callback para limpar campos relacionados (como número)
+      if (onCepCleared) {
+        onCepCleared();
+      }
       return;
     }
 

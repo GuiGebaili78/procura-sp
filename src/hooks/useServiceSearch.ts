@@ -3,7 +3,7 @@ import { searchCataBagulho } from '../services/api';
 import { CataBagulhoResult } from '../types/cataBagulho';
 import { FeiraLivre } from '../types/feiraLivre';
 import { ColetaLixoResponse } from '../types/coletaLixo';
-import { EstabelecimentoSaude, FiltroSaude } from '../types/saude';
+import { EstabelecimentoSaude } from '../lib/services/saudeLocal.service';
 
 interface Coordinates {
   lat: number;
@@ -15,7 +15,7 @@ interface SearchParams {
   numero: string;
   coordinates: Coordinates;
   enderecoCompleto: string;
-  filtrosSaude?: FiltroSaude;
+  categorias?: string[];
 }
 
 interface UseServiceSearchReturn {
@@ -92,8 +92,8 @@ export function useServiceSearch(): UseServiceSearchReturn {
   }, []);
 
   const searchSaude = useCallback(async (params: SearchParams): Promise<EstabelecimentoSaude[]> => {
-    if (!params.filtrosSaude) {
-      throw new Error("Filtros de saúde são obrigatórios");
+    if (!params.categorias || params.categorias.length === 0) {
+      throw new Error("Categorias de saúde são obrigatórias");
     }
 
     const response = await fetch('/api/saude', {
@@ -106,7 +106,7 @@ export function useServiceSearch(): UseServiceSearchReturn {
         numero: params.numero,
         latitude: params.coordinates.lat,
         longitude: params.coordinates.lng,
-        filtros: params.filtrosSaude,
+        categorias: params.categorias,
         raio: 5000 // 5km
       })
     });
@@ -115,22 +115,22 @@ export function useServiceSearch(): UseServiceSearchReturn {
 
     console.log('🔍 [ServiceSearch] Resposta da API de saúde:', data);
 
-    if (!data.success || !data.estabelecimentos || data.estabelecimentos.length === 0) {
+    if (!data.success || !data.data?.estabelecimentos || data.data.estabelecimentos.length === 0) {
       return [];
     }
 
-    return data.estabelecimentos;
+    return data.data.estabelecimentos;
   }, []);
 
   const searchEstabelecimentosTempoReal = useCallback(async (params: SearchParams): Promise<EstabelecimentoSaude[]> => {
-    if (!params.filtrosSaude) {
-      console.log('⚠️ [ServiceSearch] Não é possível aplicar filtros em tempo real - filtros não fornecidos');
+    if (!params.categorias || params.categorias.length === 0) {
+      console.log('⚠️ [ServiceSearch] Não é possível aplicar filtros em tempo real - categorias não fornecidas');
       return [];
     }
 
     try {
       console.log('🔄 [ServiceSearch] Buscando estabelecimentos em tempo real...');
-      console.log('🔧 [ServiceSearch] Filtros:', params.filtrosSaude);
+      console.log('🔧 [ServiceSearch] Categorias:', params.categorias);
       
       const response = await fetch('/api/saude', {
         method: 'POST',
@@ -142,7 +142,7 @@ export function useServiceSearch(): UseServiceSearchReturn {
           numero: params.numero,
           latitude: params.coordinates.lat,
           longitude: params.coordinates.lng,
-          filtros: params.filtrosSaude
+          categorias: params.categorias
         })
       });
 
@@ -150,9 +150,9 @@ export function useServiceSearch(): UseServiceSearchReturn {
 
       console.log('🔄 [ServiceSearch] Resposta da API (tempo real):', data);
 
-      if (data.success && data.estabelecimentos) {
-        console.log('✅ [ServiceSearch] Filtros aplicados em tempo real:', data.estabelecimentos.length, 'estabelecimentos');
-        return data.estabelecimentos;
+      if (data.success && data.data?.estabelecimentos) {
+        console.log('✅ [ServiceSearch] Filtros aplicados em tempo real:', data.data.estabelecimentos.length, 'estabelecimentos');
+        return data.data.estabelecimentos;
       } else {
         console.log('⚠️ [ServiceSearch] Nenhum resultado encontrado com os filtros aplicados');
         return [];

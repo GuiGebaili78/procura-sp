@@ -3,89 +3,49 @@
  * 
  * Verifica a conexão e funcionamento do banco de dados
  * para todos os serviços que dependem dele
+ * 
+ * ⚠️ IMPORTANTE: Este teste usa conexão REAL com o banco!
+ * Deve falhar se o Docker estiver offline.
  */
 
 import { buscarEstabelecimentosBanco, obterEstatisticasBanco } from '../../lib/services/banco-saude.service';
 import db from '../../lib/database';
 
-// Mock do banco de dados
-jest.mock('../../lib/database', () => ({
-  query: jest.fn(),
-}));
+// NÃO mockar o banco - queremos conexão real para testes de integração
+// jest.mock('../../lib/database', () => ({
+//   query: jest.fn(),
+// }));
 
-const mockDb = db as jest.Mocked<typeof db>;
+// const mockDb = db as jest.Mocked<typeof db>;
 
-// Helper para criar mocks corretos do PostgreSQL QueryResult
-const createMockQueryResult = (rows: Record<string, unknown>[], rowCount?: number) => ({
-  rows,
-  rowCount: rowCount ?? rows.length,
-  command: 'SELECT',
-  oid: 0,
-  fields: []
-});
+// Helper removido - agora usamos conexão real com o banco
 
 describe('Teste de Integração com Banco de Dados', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+  // Timeout maior para conexão real
+  jest.setTimeout(15000);
 
-  describe('1. Teste de Conexão com Banco', () => {
-    it('deve conectar com o banco de dados', async () => {
-      // Mock de resposta de teste de conexão
-      mockDb.query.mockResolvedValueOnce(createMockQueryResult([{ total: '1466' }], 1));
-
-      const result = await mockDb.query('SELECT COUNT(*) as total FROM estabelecimentos_saude WHERE ativo = true');
+  describe('1. Teste de Conexão REAL com Banco', () => {
+    it('deve conectar com o banco de dados real', async () => {
+      // Teste REAL de conexão - deve falhar se Docker estiver offline
+      const result = await db.query('SELECT COUNT(*) as total FROM estabelecimentos_saude WHERE ativo = true');
       
       expect(result.rows).toHaveLength(1);
-      expect(result.rows[0].total).toBe('1466');
-      expect(mockDb.query).toHaveBeenCalledWith('SELECT COUNT(*) as total FROM estabelecimentos_saude WHERE ativo = true');
+      expect(result.rows[0].total).toBeDefined();
+      expect(Number(result.rows[0].total)).toBeGreaterThan(0);
     });
 
-    it('deve tratar erro de conexão', async () => {
-      // Mock de erro de conexão
-      mockDb.query.mockRejectedValueOnce(new Error('Connection failed'));
-
-      await expect(mockDb.query('SELECT 1')).rejects.toThrow('Connection failed');
+    it('deve testar query básica de conexão', async () => {
+      // Teste básico de conectividade
+      const result = await db.query('SELECT 1 as test');
+      
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0].test).toBe(1);
     });
   });
 
-  describe('2. Teste de Busca de Estabelecimentos de Saúde', () => {
-    it('deve buscar estabelecimentos com filtros básicos', async () => {
-      const mockRows = [
-        {
-          id: 1,
-          nome: 'UBS Bela Vista',
-          tipo: 'UNIDADE BASICA DE SAUDE',
-          endereco: 'Rua Augusta, 200',
-          bairro: 'Bela Vista',
-          regiao: 'Centro',
-          cep: '01310-100',
-          latitude: -23.5505,
-          longitude: -46.6333,
-          esfera_administrativa: 'Municipal',
-          ativo: true
-        },
-        {
-          id: 2,
-          nome: 'Hospital Sírio-Libanês',
-          tipo: 'HOSPITAL',
-          endereco: 'Rua Dona Adma Jafet, 91',
-          bairro: 'Bela Vista',
-          regiao: 'Centro',
-          cep: '01308-050',
-          latitude: -23.5505,
-          longitude: -46.6333,
-          esfera_administrativa: 'Privado',
-          ativo: true
-        }
-      ];
-
-      // Mock das queries
-      mockDb.query
-        .mockResolvedValueOnce(createMockQueryResult([{ total: '1466' }])) // Teste de conexão
-        .mockResolvedValueOnce(createMockQueryResult(mockRows.slice(0, 3))) // Amostra de dados
-        .mockResolvedValueOnce(createMockQueryResult(mockRows)); // Query principal
-
+  describe('2. Teste REAL de Busca de Estabelecimentos de Saúde', () => {
+    it('deve buscar estabelecimentos reais com filtros básicos', async () => {
+      // Teste REAL usando dados do banco
       const filtros = {
         ubs: true,
         hospitais: true,
@@ -143,64 +103,27 @@ describe('Teste de Integração com Banco de Dados', () => {
         privado: true
       };
 
+      // Busca REAL no banco - deve falhar se Docker estiver offline
       const result = await buscarEstabelecimentosBanco(-23.5505, -46.6333, filtros);
 
-      expect(result).toHaveLength(2);
-      expect(result[0]).toMatchObject({
-        id: 'banco_1',
-        nome: 'UBS Bela Vista',
-        tipo: 'UNIDADE BASICA DE SAUDE',
-        endereco: 'Rua Augusta, 200',
-        bairro: 'Bela Vista',
-        cidade: 'São Paulo',
-        uf: 'SP',
-        coordenadas: {
-          lat: -23.5505,
-          lng: -46.6333
-        },
-        distancia: expect.any(Number),
-        gestao: 'Municipal',
-        natureza: 'Público',
-        esfera: 'Municipal',
-        vinculoSus: true,
-        ativo: true,
-        regiao: 'Centro',
-        esferaAdministrativa: 'Municipal'
-      });
-
-      expect(result[1]).toMatchObject({
-        id: 'banco_2',
-        nome: 'Hospital Sírio-Libanês',
-        tipo: 'HOSPITAL',
-        gestao: 'Privada',
-        natureza: 'Privado',
-        esfera: 'Privado',
-        vinculoSus: false,
-        esferaAdministrativa: 'Privado'
-      });
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      
+      // Verificar estrutura dos dados retornados
+      if (result.length > 0) {
+        const estabelecimento = result[0];
+        expect(estabelecimento).toHaveProperty('id');
+        expect(estabelecimento).toHaveProperty('nome');
+        expect(estabelecimento).toHaveProperty('tipo');
+        expect(estabelecimento).toHaveProperty('endereco');
+        expect(estabelecimento).toHaveProperty('coordenadas');
+        expect(estabelecimento.coordenadas).toHaveProperty('lat');
+        expect(estabelecimento.coordenadas).toHaveProperty('lng');
+      }
     });
 
     it('deve filtrar por tipo de estabelecimento', async () => {
-      const mockRows = [
-        {
-          id: 1,
-          nome: 'UBS Bela Vista',
-          tipo: 'UNIDADE BASICA DE SAUDE',
-          endereco: 'Rua Augusta, 200',
-          bairro: 'Bela Vista',
-          regiao: 'Centro',
-          cep: '01310-100',
-          latitude: -23.5505,
-          longitude: -46.6333,
-          esfera_administrativa: 'Municipal',
-          ativo: true
-        }
-      ];
-
-      mockDb.query
-        .mockResolvedValueOnce(createMockQueryResult([{ total: '1466' }]))
-        .mockResolvedValueOnce(createMockQueryResult(mockRows.slice(0, 3)))
-        .mockResolvedValueOnce(createMockQueryResult(mockRows));
+      // Teste REAL de filtro por tipo
 
       const filtros = {
         ubs: true,
@@ -259,38 +182,20 @@ describe('Teste de Integração com Banco de Dados', () => {
         privado: true
       };
 
+      // Teste REAL de filtro por tipo
       const result = await buscarEstabelecimentosBanco(-23.5505, -46.6333, filtros);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].tipo).toBe('UNIDADE BASICA DE SAUDE');
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
       
-      // Verificar se a query foi construída corretamente
-      expect(mockDb.query).toHaveBeenCalledWith(
-        expect.stringContaining("tipo IN ('UNIDADE BASICA DE SAUDE')")
-      );
+      // Verificar se todos os resultados são UBS
+      result.forEach(estabelecimento => {
+        expect(estabelecimento.tipo).toContain('UNIDADE BASICA DE SAUDE');
+      });
     });
 
     it('deve filtrar por esfera administrativa', async () => {
-      const mockRows = [
-        {
-          id: 1,
-          nome: 'UBS Bela Vista',
-          tipo: 'UNIDADE BASICA DE SAUDE',
-          endereco: 'Rua Augusta, 200',
-          bairro: 'Bela Vista',
-          regiao: 'Centro',
-          cep: '01310-100',
-          latitude: -23.5505,
-          longitude: -46.6333,
-          esfera_administrativa: 'Municipal',
-          ativo: true
-        }
-      ];
-
-      mockDb.query
-        .mockResolvedValueOnce(createMockQueryResult([{ total: '1466' }]))
-        .mockResolvedValueOnce(createMockQueryResult(mockRows.slice(0, 3)))
-        .mockResolvedValueOnce(createMockQueryResult(mockRows));
+      // Teste REAL de filtro por esfera
 
       const filtros = {
         ubs: true,
@@ -349,94 +254,45 @@ describe('Teste de Integração com Banco de Dados', () => {
         privado: false
       };
 
+      // Teste REAL de filtro por esfera
       const result = await buscarEstabelecimentosBanco(-23.5505, -46.6333, filtros);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].esferaAdministrativa).toBe('Municipal');
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
       
-      // Verificar se a query foi construída corretamente
-      expect(mockDb.query).toHaveBeenCalledWith(
-        expect.stringContaining("esfera_administrativa IN ('Municipal', 'Estadual')")
-      );
-    });
-  });
-
-  describe('3. Teste de Estatísticas do Banco', () => {
-    it('deve obter estatísticas corretamente', async () => {
-      const mockStats = {
-        total: createMockQueryResult([{ total: '1466' }]),
-        porEsfera: createMockQueryResult([
-          { esfera_administrativa: 'Municipal', count: '800' },
-          { esfera_administrativa: 'Estadual', count: '200' },
-          { esfera_administrativa: 'Privado', count: '466' }
-        ]),
-        porRegiao: createMockQueryResult([
-          { regiao: 'Centro', count: '300' },
-          { regiao: 'Zona Sul', count: '250' },
-          { regiao: 'Zona Norte', count: '200' },
-          { regiao: 'Zona Leste', count: '300' },
-          { regiao: 'Zona Oeste', count: '200' }
-        ])
-      };
-
-      mockDb.query
-        .mockResolvedValueOnce(mockStats.total)
-        .mockResolvedValueOnce(mockStats.porEsfera)
-        .mockResolvedValueOnce(mockStats.porRegiao);
-
-      const result = await obterEstatisticasBanco();
-
-      expect(result).toEqual({
-        total: 1466,
-        porEsfera: {
-          'Municipal': 800,
-          'Estadual': 200,
-          'Privado': 466
-        },
-        porRegiao: {
-          'Centro': 300,
-          'Zona Sul': 250,
-          'Zona Norte': 200,
-          'Zona Leste': 300,
-          'Zona Oeste': 200
-        }
-      });
-    });
-
-    it('deve tratar erro ao obter estatísticas', async () => {
-      mockDb.query.mockRejectedValueOnce(new Error('Database error'));
-
-      const result = await obterEstatisticasBanco();
-
-      expect(result).toEqual({
-        total: 0,
-        porEsfera: {},
-        porRegiao: {}
+      // Verificar se todos os resultados são municipais ou estaduais
+      result.forEach(estabelecimento => {
+        expect(['Municipal', 'Estadual']).toContain(estabelecimento.esferaAdministrativa);
       });
     });
   });
 
-  describe('4. Teste de Performance do Banco', () => {
-    it('deve executar queries em tempo aceitável', async () => {
-      const mockRows = Array.from({ length: 100 }, (_, i) => ({
-        id: i + 1,
-        nome: `Estabelecimento ${i + 1}`,
-        tipo: 'UNIDADE BASICA DE SAUDE',
-        endereco: `Rua ${i + 1}`,
-        bairro: 'Bela Vista',
-        regiao: 'Centro',
-        cep: '01310-100',
-        latitude: -23.5505 + (i * 0.001),
-        longitude: -46.6333 + (i * 0.001),
-        esfera_administrativa: 'Municipal',
-        ativo: true
-      }));
+  describe('3. Teste REAL de Estatísticas do Banco', () => {
+    it('deve obter estatísticas reais do banco', async () => {
+      // Teste REAL de estatísticas - deve falhar se Docker estiver offline
+      const result = await obterEstatisticasBanco();
 
-      mockDb.query
-        .mockResolvedValueOnce(createMockQueryResult([{ total: '1466' }]))
-        .mockResolvedValueOnce(createMockQueryResult(mockRows.slice(0, 3)))
-        .mockResolvedValueOnce(createMockQueryResult(mockRows));
+      expect(result).toHaveProperty('total');
+      expect(result).toHaveProperty('porEsfera');
+      expect(result).toHaveProperty('porRegiao');
+      
+      expect(typeof result.total).toBe('number');
+      expect(result.total).toBeGreaterThan(0);
+      
+      expect(typeof result.porEsfera).toBe('object');
+      expect(typeof result.porRegiao).toBe('object');
+      
+      // Verificar se há dados nas estatísticas
+      const esferas = Object.keys(result.porEsfera);
+      const regioes = Object.keys(result.porRegiao);
+      
+      expect(esferas.length).toBeGreaterThan(0);
+      expect(regioes.length).toBeGreaterThan(0);
+    });
+  });
 
+  describe('4. Teste REAL de Performance do Banco', () => {
+    it('deve executar queries reais em tempo aceitável', async () => {
       const startTime = Date.now();
       
       const filtros = {
@@ -496,13 +352,19 @@ describe('Teste de Integração com Banco de Dados', () => {
         privado: true
       };
 
-      await buscarEstabelecimentosBanco(-23.5505, -46.6333, filtros);
+      // Teste REAL de performance - deve falhar se Docker estiver offline
+      const result = await buscarEstabelecimentosBanco(-23.5505, -46.6333, filtros);
       
       const endTime = Date.now();
       const executionTime = endTime - startTime;
 
-      // Deve executar em menos de 1 segundo (considerando que é um mock)
-      expect(executionTime).toBeLessThan(1000);
+      // Verificar que retornou dados
+      expect(Array.isArray(result)).toBe(true);
+      
+      // Deve executar em menos de 10 segundos (query real com dados reais)
+      expect(executionTime).toBeLessThan(10000);
+      
+      console.log(`Query executada em ${executionTime}ms, retornou ${result.length} estabelecimentos`);
     });
   });
 });

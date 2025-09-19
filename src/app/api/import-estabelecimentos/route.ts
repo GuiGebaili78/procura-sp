@@ -8,7 +8,7 @@ export async function POST() {
     console.log('🔄 Iniciando importação dos estabelecimentos...');
     
     // Caminho para o arquivo JSON
-    const jsonPath = path.join(process.cwd(), 'public', 'dados_saude', 'estabelecimentos.json');
+    const jsonPath = path.join(process.cwd(), 'public', 'dados', 'estabelecimentos-saude.json');
     
     if (!fs.existsSync(jsonPath)) {
       return NextResponse.json(

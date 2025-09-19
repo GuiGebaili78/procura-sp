@@ -7,71 +7,88 @@ export async function geocodeAddress(
 ): Promise<NominatimResult[]> {
   console.log(`🔍 [Nominatim] Geocodificando endereço: "${query}"`);
 
-  // Usar apenas API direta do Nominatim (backend /api/geocode não existe)
-  try {
-    console.log(`🌐 [Nominatim] Fazendo requisição para Nominatim...`);
-    const directResponse = await axios.get(
-      "https://nominatim.openstreetmap.org/search",
-      {
-        params: {
-          q: query,
-          format: "json",
-          limit: 5,
-          countrycodes: "br",
-          addressdetails: 1,
-        },
-        timeout: 15000,
-        headers: {
-          "User-Agent": "Procura-SP/1.0",
-          "Accept": "application/json",
-          "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-        },
-        // Configurações para evitar CORS
-        withCredentials: false,
-      },
-    );
+  // Tentar diferentes variações do endereço para melhor precisão
+  const searchVariations = [
+    query, // Endereço original
+    query + ", São Paulo, SP, Brasil", // Com cidade e estado
+    query.replace(/,.*$/, "") + ", São Paulo, SP, Brasil", // Apenas rua + cidade
+    // Adicionar variações mais específicas para evitar ruas com nomes similares
+    query.replace(/R\.?\s*/, "Rua "), // Trocar "R." por "Rua"
+    query.replace(/R\.?\s*/, "Rua ") + ", São Paulo, SP, Brasil", // Com "Rua" + cidade
+  ];
 
-    console.log(`📊 [Nominatim] Resposta recebida:`, {
-      status: directResponse.status,
-      dataLength: directResponse.data?.length || 0,
-      hasData: !!directResponse.data
-    });
+  for (let i = 0; i < searchVariations.length; i++) {
+    const searchQuery = searchVariations[i];
+    console.log(`🌐 [Nominatim] Tentativa ${i + 1}/${searchVariations.length}: "${searchQuery}"`);
+    
+    try {
+      const directResponse = await axios.get(
+        "https://nominatim.openstreetmap.org/search",
+        {
+          params: {
+            q: searchQuery,
+            format: "json",
+            limit: 5,
+            countrycodes: "br",
+            addressdetails: 1,
+            bounded: 1, // Limitar busca ao Brasil
+            viewbox: "-46.8,-23.8,-46.3,-23.4", // Caixa delimitadora de São Paulo
+          },
+          timeout: 15000,
+          headers: {
+            "User-Agent": "Procura-SP/1.0",
+            "Accept": "application/json",
+            "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+          },
+          // Configurações para evitar CORS
+          withCredentials: false,
+        },
+      );
 
-    if (directResponse.data && Array.isArray(directResponse.data)) {
-      if (directResponse.data.length > 0) {
-        console.log(`✅ [Nominatim] Geocodificação bem-sucedida - ${directResponse.data.length} resultado(s) encontrado(s)`);
-        console.log(`📍 [Nominatim] Primeiro resultado:`, {
-          display_name: directResponse.data[0].display_name,
-          lat: directResponse.data[0].lat,
-          lon: directResponse.data[0].lon
-        });
-        return directResponse.data;
+      console.log(`📊 [Nominatim] Resposta recebida:`, {
+        status: directResponse.status,
+        dataLength: directResponse.data?.length || 0,
+        hasData: !!directResponse.data
+      });
+
+      if (directResponse.data && Array.isArray(directResponse.data)) {
+        if (directResponse.data.length > 0) {
+          console.log(`✅ [Nominatim] Geocodificação bem-sucedida - ${directResponse.data.length} resultado(s) encontrado(s)`);
+          console.log(`📍 [Nominatim] Primeiro resultado:`, {
+            display_name: directResponse.data[0].display_name,
+            lat: directResponse.data[0].lat,
+            lon: directResponse.data[0].lon
+          });
+          return directResponse.data;
+        } else {
+          console.log(`⚠️ [Nominatim] Tentativa ${i + 1} sem resultados`);
+          continue; // Tentar próxima variação
+        }
       } else {
-        console.log(`⚠️ [Nominatim] Nenhum resultado encontrado para o endereço`);
-        throw new Error("Endereço não encontrado");
+        console.log(`❌ [Nominatim] Resposta inválida na tentativa ${i + 1}`);
+        continue; // Tentar próxima variação
       }
-    } else {
-      console.log(`❌ [Nominatim] Resposta inválida da API`);
-      throw new Error("Resposta inválida da API de geocodificação");
-    }
-  } catch (error) {
-    console.error("❌ [Nominatim] Erro na geocodificação:", error);
-    
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        console.log(`⏰ [Nominatim] Timeout na requisição (15s)`);
-        throw new Error("timeout of 15000ms exceeded");
-      } else if (error.response?.status === 404) {
-        console.log(`📍 [Nominatim] Endereço não encontrado (404)`);
-        throw new Error("Endereço não encontrado");
-      } else if (error.response?.status) {
-        console.log(`🚫 [Nominatim] Erro HTTP ${error.response.status}`);
-        throw new Error(`Erro HTTP ${error.response.status}`);
+    } catch (error) {
+      console.error(`❌ [Nominatim] Erro na tentativa ${i + 1}:`, error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          console.log(`⏰ [Nominatim] Timeout na tentativa ${i + 1} (15s)`);
+        } else if (error.response?.status === 404) {
+          console.log(`📍 [Nominatim] Endereço não encontrado na tentativa ${i + 1} (404)`);
+        } else if (error.response?.status) {
+          console.log(`🚫 [Nominatim] Erro HTTP ${error.response.status} na tentativa ${i + 1}`);
+        }
+      }
+      
+      // Se não é a última tentativa, continuar
+      if (i < searchVariations.length - 1) {
+        console.log(`🔄 [Nominatim] Tentando próxima variação...`);
+        continue;
       }
     }
-    
-    throw new Error(
-      "Endereço não encontrado ou não foi possível geocodificar.",
-    );
   }
+  
+  console.log(`❌ [Nominatim] Todas as tentativas falharam`);
+  return []; // Retorna array vazio se todas as tentativas falharam
 }

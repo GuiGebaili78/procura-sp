@@ -35,14 +35,6 @@ class CataBagulhoService {
 
     console.log(`📊 [Cata-Bagulho] Resultados da fonte externa: ${liveResults.length} itens`);
 
-    // Se não encontrou resultados reais, usar dados mock
-    if (liveResults.length === 0) {
-      console.log(`🎭 [Cata-Bagulho] Nenhum resultado real encontrado, usando dados mock`);
-      const mockResults = this.getMockData(lat, lng);
-      await this.cacheResults(lat, lng, mockResults);
-      return mockResults;
-    }
-
     if (liveResults.length > 0) {
       await this.cacheResults(lat, lng, liveResults);
     }
@@ -94,12 +86,6 @@ class CataBagulhoService {
       const parsedResults = this.parseHTML(html);
       console.log(`[Cata-Bagulho] Parsing retornou ${parsedResults.length} resultados`);
       
-      // Se o parsing não retornou resultados, usar dados mock
-      if (parsedResults.length === 0) {
-        console.log("[Cata-Bagulho] Parsing não retornou resultados, usando dados mock");
-        return this.getMockData(lat, lng);
-      }
-      
       return parsedResults;
     } catch (error: unknown) {
       console.error(
@@ -107,61 +93,11 @@ class CataBagulhoService {
         error instanceof Error ? error.message : error,
       );
       
-      // Retorna dados de demonstração quando a API externa está fora
-      console.log("[Cata-Bagulho] Retornando dados de demonstração");
-      return this.getMockData(lat, lng);
+      throw error; // Re-throw para que o erro seja tratado pelo chamador
     }
   }
 
-  private getMockData(lat: number, lng: number): CataBagulhoResult[] {
-    console.log(`🎭 [Cata-Bagulho] Gerando dados mock para coordenadas: ${lat}, ${lng}`);
-    
-    // Dados de demonstração baseados na região de São Paulo
-    const mockData: CataBagulhoResult[] = [
-      {
-        street: "Avenida Paulista",
-        startStretch: "Rua Augusta",
-        endStretch: "Rua Consolação", 
-        dates: [
-          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
-          new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
-        ],
-        frequency: "Quinzenal",
-        shift: "Manhã",
-        schedule: "07:00 às 12:00",
-        trechos: ["demo-001"]
-      },
-      {
-        street: "Rua Augusta",
-        startStretch: "Avenida Paulista",
-        endStretch: "Rua da Consolação",
-        dates: [
-          new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
-          new Date(Date.now() + 17 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
-        ],
-        frequency: "Quinzenal", 
-        shift: "Tarde",
-        schedule: "13:00 às 17:00",
-        trechos: ["demo-002"]
-      },
-      {
-        street: "Rua da Consolação",
-        startStretch: "Avenida Paulista",
-        endStretch: "Rua Augusta",
-        dates: [
-          new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
-          new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
-        ],
-        frequency: "Semanal", 
-        shift: "Manhã",
-        schedule: "08:00 às 11:00",
-        trechos: ["demo-003"]
-      }
-    ];
 
-    console.log(`🎭 [Cata-Bagulho] Dados mock gerados: ${mockData.length} itens`);
-    return mockData;
-  }
 
   private parseHTML(html: string): CataBagulhoResult[] {
     const $ = cheerio.load(html);
@@ -174,6 +110,14 @@ class CataBagulhoService {
     // Debug: verificar se há conteúdo relevante no HTML
     const hasResults = html.includes("panel") || html.includes("logradouro") || html.includes("detalhes");
     console.log(`[Debug] HTML contém elementos esperados: ${hasResults}`);
+    
+    // Debug: verificar se há mensagem de não atendimento
+    const hasNaoAtendido = html.includes("Endereço não atendido pela LOCAT SP");
+    console.log(`[Debug] Contém mensagem de não atendimento: ${hasNaoAtendido}`);
+    
+    // Debug: imprimir parte do HTML para análise
+    console.log(`[Debug] Primeiros 500 caracteres do HTML:`, html.substring(0, 500));
+
 
     // Cada resultado está em um painel com classe "panel panel-default"
     $(".panel.panel-default").each((_, panelElement) => {
@@ -185,6 +129,7 @@ class CataBagulhoService {
         const streetName = $logradouro.find("strong").text().trim();
 
         if (!streetName) {
+          console.log(`[Debug] Painel sem nome de rua, pulando...`);
           return;
         }
 
@@ -337,15 +282,9 @@ export async function GET(request: NextRequest) {
     // Debug temporário
     console.log(`[DEBUG] Dados retornados: ${data.length} resultados encontrados`);
 
-    // Adiciona aviso se estamos usando dados de demonstração
-    const isUsingMockData = data.length > 0 && data[0].trechos?.[0]?.startsWith('demo-');
-    
     return NextResponse.json({ 
       success: true, 
-      data,
-      ...(isUsingMockData && { 
-        warning: "API externa temporariamente indisponível. Exibindo dados de demonstração." 
-      })
+      data
     });
   } catch (error: unknown) {
     console.error(

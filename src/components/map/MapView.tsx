@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -14,7 +14,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import { TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
-import { EstabelecimentoSaude, TIPOS_ESTABELECIMENTO } from "../../types/saude";
+import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
 
 // Ícones customizados
 const createCustomIcon = (color: string) =>
@@ -88,7 +88,9 @@ function MapController({
       }
       
       estabelecimentosSaude.forEach(estabelecimento => {
-        bounds.extend([estabelecimento.coordenadas.lat, estabelecimento.coordenadas.lng]);
+        if (estabelecimento.latitude && estabelecimento.longitude) {
+          bounds.extend([estabelecimento.latitude, estabelecimento.longitude]);
+        }
       });
       
       if (bounds.isValid()) {
@@ -253,57 +255,112 @@ export function MapView({
             );
           })}
 
-          {/* Marcadores dos estabelecimentos de saúde */}
-          {isSaude && estabelecimentosSaude.map((estabelecimento) => {
-            // Determinar o tipo e cor do estabelecimento
-            const getTipoInfo = () => {
-              const tipoMap: Record<string, keyof typeof TIPOS_ESTABELECIMENTO> = {
-                "05": "UBS",
-                "01": "HOSPITAL", 
-                "02": "POSTO",
-                "03": "FARMACIA",
-                "04": "MATERNIDADE",
-                "06": "URGENCIA",
-                "07": "ACADEMIA",
-                "08": "CAPS",
-                "09": "SAUDE_BUCAL",
-                "10": "DOENCAS_RARAS"
-              };
-              
-              const tipo = tipoMap[estabelecimento.tipoCodigo] || "UBS";
-              return TIPOS_ESTABELECIMENTO[tipo];
-            };
-
-            const tipoInfo = getTipoInfo();
+          {/* Marcadores dos estabelecimentos de saúde com agrupamento por coordenadas */}
+          {isSaude && (() => {
+            // Agrupar estabelecimentos por coordenadas
+            const grupos: Record<string, EstabelecimentoSaude[]> = {};
             
-            return (
-              <Marker 
-                key={estabelecimento.id} 
-                position={[estabelecimento.coordenadas.lat, estabelecimento.coordenadas.lng]} 
-                icon={createCustomIcon(tipoInfo.cor)}
-              >
-                <Popup>
-                  <div className="text-center">
-                    <strong>{tipoInfo.icone} {estabelecimento.nome}</strong>
-                    <br />
-                    <small>{tipoInfo.nome}</small>
-                    <br />
-                    <small className="text-gray-600">{estabelecimento.endereco}</small>
-                    {estabelecimento.distancia && (
-                      <>
-                        <br />
-                        <small className="text-blue-600">
-                          📍 {estabelecimento.distancia < 1000 
-                            ? `${Math.round(estabelecimento.distancia)}m` 
-                            : `${(estabelecimento.distancia / 1000).toFixed(1)}km`}
-                        </small>
-                      </>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+            estabelecimentosSaude.forEach(estabelecimento => {
+              if (estabelecimento.latitude && estabelecimento.longitude) {
+                const key = `${estabelecimento.latitude.toFixed(6)},${estabelecimento.longitude.toFixed(6)}`;
+                if (!grupos[key]) {
+                  grupos[key] = [];
+                }
+                grupos[key].push(estabelecimento);
+              }
+            });
+
+            // Renderizar marcadores agrupados
+            return Object.entries(grupos).map(([coords, estabelecimentos]) => {
+              const [lat, lng] = coords.split(',').map(Number);
+              const isMultiple = estabelecimentos.length > 1;
+              
+              // Função para obter cor baseada na categoria
+              const getCorPorCategoria = (categoria: string | null): string => {
+                if (!categoria) return "#6B7280"; // Cinza padrão
+                
+                const coresPorCategoria: Record<string, string> = {
+                  'Unidade Básica de Saúde': '#3B82F6', // Azul
+                  'Hospital Geral': '#EF4444', // Vermelho
+                  'Hospital': '#EF4444', // Vermelho
+                  'Hospital Especializado': '#EF4444', // Vermelho
+                  'Pronto Socorro Geral': '#F97316', // Laranja
+                  'Pronto Atendimento': '#F97316', // Laranja
+                  'AMA Especialidades': '#10B981', // Verde
+                  'Assistência Médica Ambulatorial': '#10B981', // Verde
+                  'Ambulatório de Especialidades': '#10B981', // Verde
+                  'Centro e Serviços de Diagnóstico por Imagem': '#8B5CF6', // Roxo
+                  'Centro/Clínica de Especialidades Odontológicas': '#06B6D4', // Ciano
+                  'Laboratório': '#EC4899', // Rosa
+                  'Centro de Atenção Psicossocial Adulto': '#6B7280', // Cinza
+                  'Centro de Atenção Psicossocial Infantil': '#6B7280', // Cinza
+                  'Centro de Atenção Psicossocial Álcool e Drogas': '#6B7280', // Cinza
+                  'Centro de Reabilitação': '#84CC16', // Verde lima
+                  'Núcleo Integrado de Reabilitação': '#84CC16', // Verde lima
+                };
+                
+                return coresPorCategoria[categoria] || '#6B7280';
+              };
+
+              // Usar a cor da primeira categoria ou uma cor padrão para múltiplos
+              const cor = isMultiple ? '#F59E0B' : getCorPorCategoria(estabelecimentos[0].categoria);
+              
+              return (
+                <Marker 
+                  key={coords} 
+                  position={[lat, lng]} 
+                  icon={createCustomIcon(cor)}
+                >
+                  <Popup>
+                    <div className="text-center max-w-xs">
+                      {isMultiple ? (
+                        <>
+                          <strong>🏥 {estabelecimentos.length} Estabelecimentos</strong>
+                          <br />
+                          <small className="text-gray-600">
+                            {lat.toFixed(6)}, {lng.toFixed(6)}
+                          </small>
+                          <div className="mt-2 space-y-1">
+                            {estabelecimentos.map((est) => (
+                              <div key={est.id} className="text-left border-b border-gray-200 pb-1">
+                                <div className="font-medium text-sm">{est.nome}</div>
+                                <div className="text-xs text-gray-600">{est.categoria}</div>
+                                {est.distancia && (
+                                  <div className="text-xs text-blue-600">
+                                    📍 {est.distancia < 1000 
+                                      ? `${Math.round(est.distancia)}m` 
+                                      : `${(est.distancia / 1000).toFixed(1)}km`}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <strong>🏥 {estabelecimentos[0].nome}</strong>
+                          <br />
+                          <small className="text-gray-600">{estabelecimentos[0].categoria}</small>
+                          <br />
+                          <small className="text-gray-600">{estabelecimentos[0].endereco}</small>
+                          {estabelecimentos[0].distancia && (
+                            <>
+                              <br />
+                              <small className="text-blue-600">
+                                📍 {estabelecimentos[0].distancia < 1000 
+                                  ? `${Math.round(estabelecimentos[0].distancia)}m` 
+                                  : `${(estabelecimentos[0].distancia / 1000).toFixed(1)}km`}
+                              </small>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            });
+          })()}
 
           {/* Linha do trecho */}
           {trechoCoordinates &&

@@ -1,257 +1,172 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buscarEstabelecimentosBanco } from "../../../lib/services/banco-saude.service";
-import { FiltroSaude } from "../../../types/saude";
+import { saudeLocalService } from "@/lib/services/saudeLocal.service";
 
+/**
+ * API de estabelecimentos de saúde
+ * Usa exclusivamente dados locais do arquivo estabelecimentos-saude.json
+ */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🏥 [API GET] Recebida requisição para /api/saude');
     const { searchParams } = new URL(request.url);
     
-    // Extrair parâmetros da URL
-    const cep = searchParams.get("cep");
-    const numero = searchParams.get("numero");
-    const latitude = searchParams.get("latitude");
-    const longitude = searchParams.get("longitude");
-    // const raio = searchParams.get("raio"); // Não usado mais
-    
-    // Validar parâmetros obrigatórios
-    if (!cep || !numero || !latitude || !longitude) {
-      return NextResponse.json(
-        { 
-          error: "Parâmetros obrigatórios: cep, numero, latitude, longitude" 
-        },
-        { status: 400 }
-      );
+    // Parâmetros de busca
+    const endereco = searchParams.get("endereco");
+    const unidade = searchParams.get("unidade");
+    const lat = searchParams.get("lat");
+    const lng = searchParams.get("lng");
+    const raio = searchParams.get("raio");
+    const tipo = searchParams.get("tipo");
+    const regiao = searchParams.get("regiao");
+    const administracao = searchParams.get("administracao");
+    const categorias = searchParams.get("categorias");
+    const estatisticas = searchParams.get("estatisticas");
+
+    // Se solicitou estatísticas, retornar apenas elas
+    if (estatisticas === "true") {
+      const stats = saudeLocalService.getEstatisticas();
+      return NextResponse.json({
+        success: true,
+        data: stats,
+        source: "dados_locais"
+      });
     }
-    
-    // Validar formato do CEP
-    const cepRegex = /^\d{8}$/;
-    if (!cepRegex.test(cep)) {
-      return NextResponse.json(
-        { error: "CEP deve ter 8 dígitos" },
-        { status: 400 }
-      );
+
+    // Busca por coordenadas (proximidade)
+    if (lat && lng) {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      const raioKm = raio ? parseFloat(raio) : 5;
+
+      if (isNaN(latitude) || isNaN(longitude) || isNaN(raioKm)) {
+        return NextResponse.json(
+          { success: false, message: "Coordenadas ou raio inválidos" },
+          { status: 400 }
+        );
+      }
+
+      const resultado = await saudeLocalService.buscarProximos(latitude, longitude, raioKm);
+      return NextResponse.json({
+        success: true,
+        data: resultado,
+        source: "dados_locais"
+      });
     }
-    
-    // Validar coordenadas
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    
-    if (isNaN(lat) || isNaN(lng)) {
-      return NextResponse.json(
-        { error: "Coordenadas inválidas" },
-        { status: 400 }
-      );
+
+    // Busca por endereço
+    if (endereco) {
+      const resultado = await saudeLocalService.buscarPorEndereco(endereco);
+      return NextResponse.json({
+        success: true,
+        data: resultado,
+        source: "dados_locais"
+      });
     }
-    
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return NextResponse.json(
-        { error: "Coordenadas fora do range válido" },
-        { status: 400 }
-      );
+
+    // Busca por unidade
+    if (unidade) {
+      const resultado = await saudeLocalService.buscarPorUnidade(unidade);
+      return NextResponse.json({
+        success: true,
+        data: resultado,
+        source: "dados_locais"
+      });
     }
-    
-    // Extrair filtros de camadas
-    const filtros: FiltroSaude = {
-      ubs: searchParams.get("ubs") === "true",
-      hospitais: searchParams.get("hospitais") === "true",
-      postos: searchParams.get("postos") === "true",
-      farmacias: searchParams.get("farmacias") === "true",
-      maternidades: searchParams.get("maternidades") === "true",
-      urgencia: searchParams.get("urgencia") === "true",
-      academias: searchParams.get("academias") === "true",
-      caps: searchParams.get("caps") === "true",
-      saudeBucal: searchParams.get("saudeBucal") === "true",
-      doencasRaras: searchParams.get("doencasRaras") === "true",
-      ama: searchParams.get("ama") === "true",
-      programas: searchParams.get("programas") === "true",
-      diagnostico: searchParams.get("diagnostico") === "true",
-      ambulatorio: searchParams.get("ambulatorio") === "true",
-      supervisao: searchParams.get("supervisao") === "true",
-      residencia: searchParams.get("residencia") === "true",
-      reabilitacao: searchParams.get("reabilitacao") === "true",
-      apoio: searchParams.get("apoio") === "true",
-      clinica: searchParams.get("clinica") === "true",
-      dst: searchParams.get("dst") === "true",
-      prontoSocorro: searchParams.get("prontoSocorro") === "true",
-      testagem: searchParams.get("testagem") === "true",
-      auditiva: searchParams.get("auditiva") === "true",
-      horaCerta: searchParams.get("horaCerta") === "true",
-      idoso: searchParams.get("idoso") === "true",
-      laboratorio: searchParams.get("laboratorio") === "true",
-      trabalhador: searchParams.get("trabalhador") === "true",
-      apoioDiagnostico: searchParams.get("apoioDiagnostico") === "true",
-      apoioTerapeutico: searchParams.get("apoioTerapeutico") === "true",
-      instituto: searchParams.get("instituto") === "true",
-      apae: searchParams.get("apae") === "true",
-      referencia: searchParams.get("referencia") === "true",
-      imagem: searchParams.get("imagem") === "true",
-      nutricao: searchParams.get("nutricao") === "true",
-      reabilitacaoGeral: searchParams.get("reabilitacaoGeral") === "true",
-      nefrologia: searchParams.get("nefrologia") === "true",
-      odontologica: searchParams.get("odontologica") === "true",
-      saudeMental: searchParams.get("saudeMental") === "true",
-      referenciaGeral: searchParams.get("referenciaGeral") === "true",
-      medicinas: searchParams.get("medicinas") === "true",
-      hemocentro: searchParams.get("hemocentro") === "true",
-      zoonoses: searchParams.get("zoonoses") === "true",
-      laboratorioZoo: searchParams.get("laboratorioZoo") === "true",
-      casaParto: searchParams.get("casaParto") === "true",
-      sexual: searchParams.get("sexual") === "true",
-      dstUad: searchParams.get("dstUad") === "true",
-      capsInfantil: searchParams.get("capsInfantil") === "true",
-      ambulatorios: searchParams.get("ambulatorios") === "true",
-      programasGerais: searchParams.get("programasGerais") === "true",
-      tradicionais: searchParams.get("tradicionais") === "true",
-      dependente: searchParams.get("dependente") === "true",
-      // Filtros por esfera administrativa
-      municipal: searchParams.get("municipal") === "true",
-      estadual: searchParams.get("estadual") === "true",
-      privado: searchParams.get("privado") === "true"
-    };
-    
-    // Verificar se pelo menos um filtro está ativo
-    const temFiltroAtivo = Object.values(filtros).some(filtro => filtro);
-    if (!temFiltroAtivo) {
-      return NextResponse.json(
-        { error: "Pelo menos um tipo de estabelecimento deve ser selecionado" },
-        { status: 400 }
-      );
+
+    // Busca por tipo
+    if (tipo) {
+      const resultado = await saudeLocalService.buscarPorTipo(tipo);
+      return NextResponse.json({
+        success: true,
+        data: resultado,
+        source: "dados_locais"
+      });
     }
-    
-    // Buscar estabelecimentos no banco de dados
-    console.log('🔍 [API] Chamando buscarEstabelecimentosBanco...');
-    const estabelecimentos = await buscarEstabelecimentosBanco(lat, lng, filtros);
-    console.log('📊 [API] Resultado:', estabelecimentos.length, 'estabelecimentos');
-    
+
+    // Busca por região
+    if (regiao) {
+      const resultado = await saudeLocalService.buscarPorRegiao(regiao);
+      return NextResponse.json({
+        success: true,
+        data: resultado,
+        source: "dados_locais"
+      });
+    }
+
+    // Busca por administração
+    if (administracao) {
+      const resultado = await saudeLocalService.buscarPorAdministracao(administracao);
+      return NextResponse.json({
+        success: true,
+        data: resultado,
+        source: "dados_locais"
+      });
+    }
+
+    // Busca geral com múltiplos filtros
+    const resultado = await saudeLocalService.buscar({
+      endereco: endereco || undefined,
+      unidade: unidade || undefined,
+      lat: lat ? parseFloat(lat) : undefined,
+      lng: lng ? parseFloat(lng) : undefined,
+      raio: raio ? parseFloat(raio) : undefined,
+      tipo: tipo || undefined,
+      regiao: regiao || undefined,
+      administracao: administracao || undefined,
+      categorias: categorias ? categorias.split(',') : undefined
+    });
+
     return NextResponse.json({
       success: true,
-      estabelecimentos,
-      total: estabelecimentos.length,
-      source: "banco",
-      timestamp: new Date().toISOString()
+      data: resultado,
+      source: "dados_locais"
     });
-    
-  } catch (error) {
-    console.error("Erro na API de saúde:", error);
-    
+
+  } catch (error: unknown) {
+    console.error("[API:Saude] Erro:", error instanceof Error ? error.message : error);
     return NextResponse.json(
-      { 
-        error: "Erro interno do servidor",
-        message: error instanceof Error ? error.message : "Erro desconhecido"
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Erro interno do servidor",
       },
       { status: 500 }
     );
   }
 }
 
+/**
+ * POST para buscas mais complexas
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // Validar estrutura do body
-    const { cep, numero, latitude, longitude, filtros } = body;
-    
-    if (!cep || !numero || !latitude || !longitude || !filtros) {
-      return NextResponse.json(
-        { 
-          error: "Body deve conter: cep, numero, latitude, longitude, filtros" 
-        },
-        { status: 400 }
-      );
-    }
-    
-    // Validar formato do CEP
-    const cepRegex = /^\d{8}$/;
-    if (!cepRegex.test(cep)) {
-      return NextResponse.json(
-        { error: "CEP deve ter 8 dígitos" },
-        { status: 400 }
-      );
-    }
-    
-    // Validar coordenadas
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    
-    if (isNaN(lat) || isNaN(lng)) {
-      return NextResponse.json(
-        { error: "Coordenadas inválidas" },
-        { status: 400 }
-      );
-    }
-    
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return NextResponse.json(
-        { error: "Coordenadas fora do range válido" },
-        { status: 400 }
-      );
-    }
-    
-    // Validar filtros
-    const filtrosObrigatorios = [
-      "ubs", "hospitais", "postos", "farmacias", "maternidades",
-      "urgencia", "academias", "caps", "saudeBucal", "doencasRaras"
-    ];
-    
-    for (const filtro of filtrosObrigatorios) {
-      if (typeof filtros[filtro] !== "boolean") {
-        return NextResponse.json(
-          { error: `Filtro '${filtro}' deve ser boolean` },
-          { status: 400 }
-        );
-      }
-    }
-    
-    // Verificar se pelo menos um filtro está ativo
-    const temFiltroAtivo = Object.values(filtros).some(filtro => filtro);
-    if (!temFiltroAtivo) {
-      return NextResponse.json(
-        { error: "Pelo menos um tipo de estabelecimento deve ser selecionado" },
-        { status: 400 }
-      );
-    }
-    
-    // Buscar estabelecimentos no banco de dados
-    console.log('🔍 [API] Chamando buscarEstabelecimentosBanco...');
-    const estabelecimentos = await buscarEstabelecimentosBanco(lat, lng, filtros);
-    console.log('📊 [API] Resultado:', estabelecimentos.length, 'estabelecimentos');
-    
+    const { endereco, unidade, lat, lng, raio, tipo, regiao, administracao, categorias } = body;
+
+    const resultado = await saudeLocalService.buscar({
+      endereco,
+      unidade,
+      lat,
+      lng,
+      raio,
+      tipo,
+      regiao,
+      administracao,
+      categorias
+    });
+
     return NextResponse.json({
       success: true,
-      estabelecimentos,
-      total: estabelecimentos.length,
-      source: "banco",
-      timestamp: new Date().toISOString()
+      data: resultado,
+      source: "dados_locais"
     });
-    
-  } catch (error) {
-    console.error("Erro na API de saúde (POST):", error);
-    
-    // Garantir que sempre retornamos JSON, mesmo em caso de erro
-    try {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: "Erro interno do servidor",
-          message: error instanceof Error ? error.message : "Erro desconhecido",
-          timestamp: new Date().toISOString()
-        },
-        { status: 500 }
-      );
-    } catch {
-      // Se até o JSON falhar, retornar erro simples
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Erro crítico no servidor",
-          message: "Falha ao processar resposta"
-        }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
+
+  } catch (error: unknown) {
+    console.error("[API:Saude] Erro:", error instanceof Error ? error.message : error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Erro interno do servidor",
+      },
+      { status: 500 }
+    );
   }
 }

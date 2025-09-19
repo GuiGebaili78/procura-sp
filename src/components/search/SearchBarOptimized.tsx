@@ -5,14 +5,14 @@ import { Card } from "../ui/Card";
 import { CepInput } from "./CepInput";
 import { AddressDisplay } from "./AddressDisplay";
 import { SearchButton } from "./SearchButton";
-import { HealthLayerSelector } from "../health/HealthLayerSelector";
+import { HealthFilters } from "../health/HealthFilters";
 import { useCepSearch } from "../../hooks/useCepSearch";
 import { useGeocoding } from "../../hooks/useGeocoding";
 import { useServiceSearch } from "../../hooks/useServiceSearch";
 import { CataBagulhoResult } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
-import { EstabelecimentoSaude, FiltroSaude } from "../../types/saude";
+import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
 
 interface SearchBarProps {
   selectedService: string;
@@ -41,66 +41,23 @@ export const SearchBarOptimized = memo(function SearchBarOptimized({
   const [loading, setLoading] = useState(false);
   const [noResultsMessage, setNoResultsMessage] = useState("");
   
-  // Filtros de saúde com valores padrão - memoizados
-  const [filtrosSaude, setFiltrosSaude] = useState<FiltroSaude>(() => ({
-    ubs: true,
-    hospitais: true,
-    postos: false,
-    farmacias: false,
-    maternidades: false,
-    urgencia: false,
-    academias: false,
-    caps: false,
-    saudeBucal: false,
-    doencasRaras: false,
-    ama: false,
-    programas: false,
-    diagnostico: false,
-    ambulatorio: false,
-    supervisao: false,
-    residencia: false,
-    reabilitacao: false,
-    apoio: false,
-    clinica: false,
-    dst: false,
-    prontoSocorro: false,
-    testagem: false,
-    auditiva: false,
-    horaCerta: false,
-    idoso: false,
-    laboratorio: false,
-    trabalhador: false,
-    apoioDiagnostico: false,
-    apoioTerapeutico: false,
-    instituto: false,
-    apae: false,
-    referencia: false,
-    imagem: false,
-    nutricao: false,
-    reabilitacaoGeral: false,
-    nefrologia: false,
-    odontologica: false,
-    saudeMental: false,
-    referenciaGeral: false,
-    medicinas: false,
-    hemocentro: false,
-    zoonoses: false,
-    laboratorioZoo: false,
-    casaParto: false,
-    sexual: false,
-    dstUad: false,
-    capsInfantil: false,
-    ambulatorios: false,
-    programasGerais: false,
-    tradicionais: false,
-    dependente: false,
-    municipal: true,
-    estadual: true,
-    privado: true
-  }));
+  // Filtros de saúde baseados em categorias
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([
+    'Unidade Básica de Saúde',
+    'Hospital Geral',
+    'Hospital',
+    'Pronto Socorro Geral'
+  ]);
 
   // Hooks customizados
   const { cep, endereco, loadingCep, cepError, handleCepChange } = useCepSearch();
+  
+  // Função para limpar o campo número quando CEP for alterado
+  const handleCepChangeWithClear = useCallback(async (value: string) => {
+    await handleCepChange(value, () => {
+      setNumero(""); // Limpa o campo número quando CEP é alterado
+    });
+  }, [handleCepChange]);
   const { geocodeAddress, obterCoordenadasAproximadasPorCEP } = useGeocoding();
   const { searchCataBagulho, searchFeiras, searchColetaLixo, searchSaude, searchEstabelecimentosTempoReal } = useServiceSearch();
 
@@ -127,7 +84,7 @@ export const SearchBarOptimized = memo(function SearchBarOptimized({
   }, [loading, loadingCep, cep, numero, endereco.logradouro]);
 
   // Função para buscar estabelecimentos em tempo real - memoizada
-  const buscarEstabelecimentosTempoReal = useCallback(async (novosFiltros: FiltroSaude) => {
+  const buscarEstabelecimentosTempoReal = useCallback(async (novasCategorias: string[]) => {
     if (selectedService !== "saude" || !cep || !numero || !endereco.logradouro) {
       console.log('⚠️ [SearchBar] Não é possível aplicar filtros em tempo real - dados incompletos');
       return;
@@ -151,7 +108,7 @@ export const SearchBarOptimized = memo(function SearchBarOptimized({
         numero,
         coordinates,
         enderecoCompleto,
-        filtrosSaude: novosFiltros
+        categorias: novasCategorias
       });
 
       if (results.length > 0) {
@@ -221,7 +178,7 @@ export const SearchBarOptimized = memo(function SearchBarOptimized({
         numero,
         coordinates,
         enderecoCompleto,
-        filtrosSaude: selectedService === "saude" ? filtrosSaude : undefined
+        categorias: selectedService === "saude" ? selectedCategories : undefined
       };
 
       let results: CataBagulhoResult[] | FeiraLivre[] | ColetaLixoResponse | EstabelecimentoSaude[] = [];
@@ -265,7 +222,7 @@ export const SearchBarOptimized = memo(function SearchBarOptimized({
     endereco.logradouro,
     enderecoCompleto,
     selectedService,
-    filtrosSaude,
+    selectedCategories,
     serviceName,
     geocodeAddress,
     obterCoordenadasAproximadasPorCEP,
@@ -284,10 +241,10 @@ export const SearchBarOptimized = memo(function SearchBarOptimized({
     }
   }, [handleSearch]);
 
-  const handleFiltroChange = useCallback((novosFiltros: FiltroSaude) => {
-    setFiltrosSaude(novosFiltros);
+  const handleCategoryChange = useCallback((novasCategorias: string[]) => {
+    setSelectedCategories(novasCategorias);
     // Aplicar filtros em tempo real se já tiver coordenadas
-    buscarEstabelecimentosTempoReal(novosFiltros);
+    buscarEstabelecimentosTempoReal(novasCategorias);
   }, [buscarEstabelecimentosTempoReal]);
 
   return (
@@ -301,7 +258,7 @@ export const SearchBarOptimized = memo(function SearchBarOptimized({
         numero={numero}
         loadingCep={loadingCep}
         cepError={cepError}
-        onCepChange={handleCepChange}
+        onCepChange={handleCepChangeWithClear}
         onNumeroChange={setNumero}
         onKeyPress={handleKeyPress}
         disabled={loading}
@@ -312,9 +269,10 @@ export const SearchBarOptimized = memo(function SearchBarOptimized({
       {/* Filtros de Saúde */}
       {selectedService === "saude" && (
         <div className="mb-6">
-          <HealthLayerSelector
-            filtros={filtrosSaude}
-            onFiltroChange={handleFiltroChange}
+          <HealthFilters
+            selectedCategories={selectedCategories}
+            onCategoryChange={handleCategoryChange}
+            disabled={loading}
           />
         </div>
       )}

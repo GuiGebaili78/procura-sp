@@ -28,7 +28,7 @@ export function Header() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-primary">
-                ProcuraSP
+                Procura SP
               </h1>
               <p className="text-xs text-text-secondary -mt-1">Serviços Públicos</p>
             </div>
