@@ -234,12 +234,6 @@ function BuscarPageContent() {
                 estabelecimentosSaude={saudeResults}
               />
             )}
-            {console.log("🗺️ [BuscarPage] Saúde - Passando para MapView:")}
-            {console.log("🗺️ [BuscarPage] Saúde - center:", userCoordinates ? [userCoordinates.lat, userCoordinates.lng] : "undefined")}
-            {console.log("🗺️ [BuscarPage] Saúde - userLocation:", userCoordinates ? [userCoordinates.lat, userCoordinates.lng] : "undefined")}
-            {console.log("🗺️ [BuscarPage] Saúde - userAddress:", userAddress)}
-            {console.log("🗺️ [BuscarPage] Saúde - isSaude:", true)}
-            {console.log("🗺️ [BuscarPage] Saúde - estabelecimentosSaude:", saudeResults.length)}
 
             {!userCoordinates && !loadingSearch && (
               <Card padding="lg" className="text-center">
@@ -331,13 +325,6 @@ function BuscarPageContent() {
                     isSaude={false}
                     estabelecimentosSaude={[]}
                   />
-                  {console.log("🗺️ [BuscarPage] Passando para MapView:")}
-                  {console.log("🗺️ [BuscarPage] - center:", [userCoordinates.lat, userCoordinates.lng])}
-                  {console.log("🗺️ [BuscarPage] - userLocation:", [userCoordinates.lat, userCoordinates.lng])}
-                  {console.log("🗺️ [BuscarPage] - userAddress:", userAddress)}
-                  {console.log("🗺️ [BuscarPage] - isFeira:", currentServiceType === "feiras-livres")}
-                  {console.log("🗺️ [BuscarPage] - feiras:", feirasResults.length)}
-                  
                 </>
               )}
 

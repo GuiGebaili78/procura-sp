@@ -209,15 +209,6 @@ export function MapView({
           className="h-full w-full"
           zoomControl={true}
         >
-          {console.log("🗺️ [MapView] MapContainer center:", center)}
-          {console.log("🗺️ [MapView] MapContainer center type:", typeof center)}
-          {console.log("🗺️ [MapView] MapContainer center length:", center?.length)}
-          {console.log("🗺️ [MapView] MapContainer center[0]:", center?.[0])}
-          {console.log("🗺️ [MapView] MapContainer center[1]:", center?.[1])}
-          {console.log("🗺️ [MapView] MapContainer center is array:", Array.isArray(center))}
-          {console.log("🗺️ [MapView] MapContainer center is valid:", center && Array.isArray(center) && center.length === 2 && typeof center[0] === 'number' && typeof center[1] === 'number')}
-          {console.log("🗺️ [MapView] MapContainer center[0] is number:", typeof center?.[0] === 'number')}
-          {console.log("🗺️ [MapView] MapContainer center[1] is number:", typeof center?.[1] === 'number')}
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -245,7 +236,6 @@ export function MapView({
           {/* Marcador da localização do usuário */}
           {userLocation && (
             <>
-              {console.log("🗺️ [MapView] Renderizando marcador do usuário:", userLocation)}
               <Marker position={userLocation} icon={userLocationIcon}>
                 <Popup>
                   <div className="text-center">
