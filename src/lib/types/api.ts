@@ -1,0 +1,50 @@
+// Tipos para as APIs do sistema Procura SP
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+export interface ViaCepResponse {
+  cep: string;
+  logradouro: string;
+  unidade?: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+}
+
+export interface CataBagulhoResult {
+  street: string;
+  startStretch?: string;
+  endStretch?: string;
+  dates: string[];
+  frequency: string;
+  shift: string;
+  schedule: string;
+  trechos?: string[];
+}
+
+export interface TrechoCoordinates {
+  cd_mapa: string;
+  coordinates: Array<{ lat: number; lng: number }>;
+  resultado: number;
+}
+
+export interface NominatimResult {
+  place_id: number;
+  lat: string;
+  lon: string;
+  display_name: string;
+  address?: {
+    road?: string;
+    house_number?: string;
+    suburb?: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+  };
+}
