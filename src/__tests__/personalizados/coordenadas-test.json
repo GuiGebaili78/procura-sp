@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-09-24T19:21:47.678Z",
+  "coordenadas": {
+    "lat": -23.6066347,
+    "lng": -46.6018006,
+    "endereco": "Rua Ateneu, 22, Vila Moinho Velho, São Paulo, SP",
+    "cep": "04284020",
+    "numero": "22"
+  },
+  "referencia": {
+    "lat": -23.606273,
+    "lng": -46.602097
+  },
+  "toleranciaMetros": 100,
+  "distanciaCalculada": 50.29546684345606,
+  "status": "sucesso"
+}

@@ -5,7 +5,7 @@ const createJestConfig = nextJest({
 })
 
 const config = {
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node', // Mudado para node para permitir requisições HTTP
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/jest.setup.ts'],
   testMatch: [
     '<rootDir>/src/__tests__/**/*.test.{js,jsx,ts,tsx}',
@@ -17,7 +17,7 @@ const config = {
   moduleDirectories: ['node_modules', '<rootDir>/src'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   clearMocks: true,
-  testTimeout: 10000,
+  testTimeout: 30000, // Aumentado timeout para requisições HTTP
 }
 
 module.exports = createJestConfig(config)

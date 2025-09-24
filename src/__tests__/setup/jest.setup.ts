@@ -8,8 +8,8 @@ process.env.POSTGRES_USER = 'test_user'
 process.env.POSTGRES_DB = 'test_db'
 process.env.POSTGRES_PASSWORD = 'test_password'
 
-// Mock do fetch global
-global.fetch = jest.fn()
+// Mock do fetch global (desabilitado para testes personalizados)
+// global.fetch = jest.fn()
 
 // Mock básicos para browser APIs
 if (typeof window !== 'undefined') {

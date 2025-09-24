@@ -33,18 +33,5 @@ export interface TrechoCoordinates {
   resultado: number;
 }
 
-export interface NominatimResult {
-  place_id: number;
-  lat: string;
-  lon: string;
-  display_name: string;
-  address?: {
-    road?: string;
-    house_number?: string;
-    suburb?: string;
-    city?: string;
-    state?: string;
-    postcode?: string;
-    country?: string;
-  };
-}
+// Removido: NominatimResult (não usado mais)
+// Substituído por coordenadas aproximadas locais

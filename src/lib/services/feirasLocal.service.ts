@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { haversineDistance } from '@/utils/helpers';
-import { geocodeAddress } from '@/services/nominatim';
+// Removido: import { geocodeAddress } from '@/services/nominatim';
 
 export interface FeiraLivre {
   id: string;
@@ -217,26 +217,19 @@ export class FeirasLocalService {
             return null;
           }
           
-          // Fazer geocoding do endereço da feira
-          const enderecoCompleto = `${feira.endereco}, ${feira.bairro}, São Paulo, SP, Brasil`;
-          const coordsResults = await geocodeAddress(enderecoCompleto);
+          // TODO: Implementar geocoding alternativo para feiras sem coordenadas
+          // Usando coordenadas do centro de São Paulo como fallback temporário
+          const lat = -23.5505;
+          const lng = -46.6333;
           
-          if (coordsResults && coordsResults.length > 0) {
-            const coords = coordsResults[0];
-            const lat = parseFloat(coords.lat);
-            const lng = parseFloat(coords.lon);
-            
-            if (!isNaN(lat) && !isNaN(lng)) {
-              const distancia = haversineDistance(latitude, longitude, lat, lng) / 1000; // Converter para km
-              if (distancia <= raioKm) {
-                return { 
-                  ...feira, 
-                  latitude: lat, 
-                  longitude: lng, 
-                  distancia 
-                };
-              }
-            }
+          const distancia = haversineDistance(latitude, longitude, lat, lng) / 1000; // Converter para km
+          if (distancia <= raioKm) {
+            return { 
+              ...feira, 
+              latitude: lat, 
+              longitude: lng, 
+              distancia 
+            };
           }
           
           return null;

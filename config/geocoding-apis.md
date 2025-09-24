@@ -12,10 +12,11 @@
 - **Registro:** https://www.mapbox.com/
 - **Token:** Substitua `YOUR_MAPBOX_TOKEN` no código
 
-### 3. Nominatim (OpenStreetMap)
-- **Limite gratuito:** 1.000 requisições/hora
-- **Registro:** Não necessário
-- **Uso:** Já configurado, sem chave
+### 3. ~~Nominatim (OpenStreetMap)~~ - REMOVIDO
+- ~~**Limite gratuito:** 1.000 requisições/hora~~
+- ~~**Registro:** Não necessário~~
+- ~~**Uso:** Já configurado, sem chave~~
+- **Status:** Removido por bloqueios e instabilidade
 
 ## Como Configurar
 
@@ -38,10 +39,10 @@
 ## Estratégia de Fallback
 
 O sistema tenta as APIs na seguinte ordem:
-1. **OpenCage** (mais preciso)
-2. **Nominatim** (gratuito, sem chave)
-3. **MapBox** (alto limite)
-4. **Coordenadas aproximadas** (fallback final)
+1. **Coordenadas específicas conhecidas** (mais preciso)
+2. **OpenCage** (preciso, requer chave)
+3. **MapBox** (alto limite, requer token)
+4. **Coordenadas aproximadas por região** (fallback final)
 
 ## Scripts Disponíveis
 

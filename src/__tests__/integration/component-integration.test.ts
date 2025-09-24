@@ -5,7 +5,7 @@
 
 // Mock dos services para não fazer chamadas reais
 jest.mock('@/services/viacep')
-jest.mock('@/services/nominatim')  
+// Removido: jest.mock('@/services/nominatim')  
 jest.mock('@/services/api')
 
 import { SearchBar } from '@/components/search/SearchBar'
@@ -19,11 +19,11 @@ describe('Component Integration Tests', () => {
 
     it('deve conseguir importar services mockados', async () => {
       const { fetchCep } = await import('@/services/viacep')
-      const { geocodeAddress } = await import('@/services/nominatim')
+      // Removido: const { geocodeAddress } = await import('@/services/nominatim')
       const { searchCataBagulho } = await import('@/services/api')
 
       expect(fetchCep).toBeDefined()
-      expect(geocodeAddress).toBeDefined()
+      // Removido: expect(geocodeAddress).toBeDefined()
       expect(searchCataBagulho).toBeDefined()
     })
   })

@@ -15,6 +15,7 @@ import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import { TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
+import { HealthMarkerPopup } from "../health/HealthMarkerPopup";
 
 // Ícones customizados
 const createCustomIcon = (color: string) =>
@@ -87,23 +88,48 @@ function MapController({
     console.log("🗺️ [MapController] - estabelecimentosSaude.length:", estabelecimentosSaude.length);
     
     if (isSaude && estabelecimentosSaude.length > 0) {
-      // Para saúde, ajustar para mostrar todos os estabelecimentos e o usuário
-      const bounds = new LatLngBounds([]);
-      
+      // Para saúde, centralizar no usuário primeiro para facilitar navegação
       if (userLocation) {
-        console.log("🗺️ [MapController] Adicionando userLocation aos bounds:", userLocation);
-        bounds.extend(userLocation);
-      }
-      
-      estabelecimentosSaude.forEach(estabelecimento => {
-        if (estabelecimento.latitude && estabelecimento.longitude) {
-          bounds.extend([estabelecimento.latitude, estabelecimento.longitude]);
+        console.log("🗺️ [MapController] Centralizando no usuário para saúde:", userLocation);
+        // Centralizar no usuário com zoom adequado para ver estabelecimentos próximos
+        map.setView(userLocation, 15);
+        
+        // Opcionalmente, ajustar bounds para incluir estabelecimentos próximos
+        // mas mantendo o foco no usuário
+        setTimeout(() => {
+          const bounds = new LatLngBounds([]);
+          bounds.extend(userLocation);
+          
+          // Adicionar apenas estabelecimentos próximos (dentro de 2km)
+          estabelecimentosSaude.forEach(estabelecimento => {
+            if (estabelecimento.latitude && estabelecimento.longitude) {
+              // Calcular distância do usuário
+              const distancia = map.distance(userLocation, [estabelecimento.latitude, estabelecimento.longitude]);
+              if (distancia <= 2000) { // 2km
+                bounds.extend([estabelecimento.latitude, estabelecimento.longitude]);
+              }
+            }
+          });
+          
+          // Se há estabelecimentos próximos, ajustar bounds suavemente
+          if (bounds.isValid() && bounds.getNorthEast() !== bounds.getSouthWest()) {
+            console.log("🗺️ [MapController] Ajustando bounds para estabelecimentos próximos");
+            map.fitBounds(bounds, { padding: [30, 30] });
+          }
+        }, 500); // Delay para suavizar a transição
+      } else {
+        // Fallback: se não há userLocation, usar bounds normal
+        const bounds = new LatLngBounds([]);
+        estabelecimentosSaude.forEach(estabelecimento => {
+          if (estabelecimento.latitude && estabelecimento.longitude) {
+            bounds.extend([estabelecimento.latitude, estabelecimento.longitude]);
+          }
+        });
+        
+        if (bounds.isValid()) {
+          console.log("🗺️ [MapController] Ajustando bounds para saúde (sem userLocation)");
+          map.fitBounds(bounds, { padding: [20, 20] });
         }
-      });
-      
-      if (bounds.isValid()) {
-        console.log("🗺️ [MapController] Ajustando bounds para saúde");
-        map.fitBounds(bounds, { padding: [20, 20] });
       }
     } else if (isFeira && feiras.length > 0) {
       // Para feiras, ajustar para mostrar todas as feiras e o usuário
@@ -344,50 +370,7 @@ export function MapView({
                   icon={createCustomIcon(cor)}
                 >
                   <Popup>
-                    <div className="text-center max-w-xs">
-                      {isMultiple ? (
-                        <>
-                          <strong>🏥 {estabelecimentos.length} Estabelecimentos</strong>
-                          <br />
-                          <small className="text-gray-600">
-                            {lat.toFixed(6)}, {lng.toFixed(6)}
-                          </small>
-                          <div className="mt-2 space-y-1">
-                            {estabelecimentos.map((est) => (
-                              <div key={est.id} className="text-left border-b border-gray-200 pb-1">
-                                <div className="font-medium text-sm">{est.nome}</div>
-                                <div className="text-xs text-gray-600">{est.categoria}</div>
-                                {est.distancia && (
-                                  <div className="text-xs text-blue-600">
-                                    📍 {est.distancia < 1000 
-                                      ? `${Math.round(est.distancia)}m` 
-                                      : `${(est.distancia / 1000).toFixed(1)}km`}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <strong>🏥 {estabelecimentos[0].nome}</strong>
-                          <br />
-                          <small className="text-gray-600">{estabelecimentos[0].categoria}</small>
-                          <br />
-                          <small className="text-gray-600">{estabelecimentos[0].endereco}</small>
-                          {estabelecimentos[0].distancia && (
-                            <>
-                              <br />
-                              <small className="text-blue-600">
-                                📍 {estabelecimentos[0].distancia < 1000 
-                                  ? `${Math.round(estabelecimentos[0].distancia)}m` 
-                                  : `${(estabelecimentos[0].distancia / 1000).toFixed(1)}km`}
-                              </small>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
+                    <HealthMarkerPopup estabelecimentos={estabelecimentos} />
                   </Popup>
                 </Marker>
               );

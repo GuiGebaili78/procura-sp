@@ -23,7 +23,8 @@
     "test": "jest --testPathPattern=unit --verbose",
     "test:integration": "jest --testPathPattern=integration --verbose",
     "test:all": "jest --verbose",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:personalizado": "jest --testPathPattern=personalizados --verbose"
   },
   "dependencies": {
     "axios": "^1.11.0",
