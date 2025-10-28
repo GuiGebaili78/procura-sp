@@ -115,7 +115,7 @@ describe('Saúde Pública - Estabelecimentos de Saúde', () => {
           coordenadas: coordenadas,
           descricao: dadosCoordenadas.coordenadas.endereco
         },
-        ...estabelecimentosProximos.map((estabelecimento, index) => ({
+        ...estabelecimentosProximos.map((estabelecimento) => ({
           id: `saude_${estabelecimento.id}`,
           tipo: 'estabelecimento_saude',
           cor: '#0066CC',

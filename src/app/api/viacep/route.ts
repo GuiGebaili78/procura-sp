@@ -251,12 +251,12 @@ export async function GET(request: NextRequest) {
       {
         nome: 'Nominatim',
         headers: { 'User-Agent': 'ProcuraSP/1.0' },
-        processarResposta: (data: any) => {
-          if (data && data.length > 0) {
+        processarResposta: (data: unknown) => {
+          if (data && Array.isArray(data) && data.length > 0) {
             // Procurar o primeiro resultado válido para São Paulo
             for (const item of data) {
-              const lat = parseFloat(item.lat);
-              const lng = parseFloat(item.lon);
+              const lat = parseFloat((item as {lat: string}).lat);
+              const lng = parseFloat((item as {lon: string}).lon);
               if (validarCoordenadasSaoPaulo({ lat, lng })) {
                 return { lat, lng };
               }
@@ -272,10 +272,13 @@ export async function GET(request: NextRequest) {
       servicosGeocoding.push({
         nome: 'OpenCage',
         headers: {},
-        processarResposta: (data: any) => data && data.results && data.results.length > 0 ? {
-          lat: parseFloat(data.results[0].geometry.lat),
-          lng: parseFloat(data.results[0].geometry.lng)
-        } : null
+        processarResposta: (data: unknown) => {
+          const geocodeData = data as {results?: Array<{geometry: {lat: string; lng: string}}>};
+          return geocodeData && geocodeData.results && geocodeData.results.length > 0 ? {
+            lat: parseFloat(geocodeData.results[0].geometry.lat),
+            lng: parseFloat(geocodeData.results[0].geometry.lng)
+          } : null;
+        }
       });
     }
     
@@ -284,10 +287,13 @@ export async function GET(request: NextRequest) {
       servicosGeocoding.push({
         nome: 'MapBox',
         headers: {},
-        processarResposta: (data: any) => data && data.features && data.features.length > 0 ? {
-          lat: parseFloat(data.features[0].center[1]),
-          lng: parseFloat(data.features[0].center[0])
-        } : null
+        processarResposta: (data: unknown) => {
+          const geocodeData = data as {features?: Array<{center: [number, number]}>};
+          return geocodeData && geocodeData.features && geocodeData.features.length > 0 ? {
+            lat: parseFloat(geocodeData.features[0].center[1].toString()),
+            lng: parseFloat(geocodeData.features[0].center[0].toString())
+          } : null;
+        }
       });
     }
     

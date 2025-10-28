@@ -1,18 +1,9 @@
 import database from '../database';
 import { ColetaLixo, ColetaLixoSearchParams, ColetaLixoApiResponse, ColetaLixoResponse } from '../../types/coletaLixo';
-import https from 'https';
 import * as cheerio from 'cheerio';
 
 // Configurar para ignorar certificados SSL problemáticos
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
-// Interface para dados da API da Ecourbis
-interface EcourbisApiItem {
-  tipo?: string;
-  endereco?: string;
-  dias?: string | string[];
-  horarios?: string | string[];
-  frequencia?: string;
   observacoes?: string;
 }
 
@@ -423,7 +414,7 @@ export class ColetaLixoService {
   /**
    * Processa horários da API Ecourbis (objeto com dias da semana) - Retorna string
    */
-  private processarHorariosEcourbis(horarios: any): string {
+  private processarHorariosEcourbis(horarios: Record<string, string>): string {
     if (!horarios || typeof horarios !== 'object') return 'Conforme programação';
     
     const horariosArray: string[] = [];
@@ -449,7 +440,7 @@ export class ColetaLixoService {
   /**
    * Processa horários da API Ecourbis (objeto com dias da semana) - Retorna array
    */
-  private processarHorariosEcourbisArray(horarios: any): string[] {
+  private processarHorariosEcourbisArray(horarios: Record<string, string>): string[] {
     if (!horarios || typeof horarios !== 'object') return ['Conforme programação'];
     
     const horariosArray: string[] = [];

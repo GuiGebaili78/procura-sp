@@ -58,14 +58,15 @@ describe('Coleta de Lixo - API Ecourbis', () => {
       process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
       
       // Usar axios que lida melhor com certificados SSL
-      const axios = require('axios');
+      const axios = await import('axios');
+      const https = await import('https');
       
-      const response = await axios.get(url, {
+      const response = await axios.default.get(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         },
         timeout: 10000,
-        httpsAgent: new (require('https').Agent)({
+        httpsAgent: new https.Agent({
           rejectUnauthorized: false
         })
       });
@@ -97,7 +98,7 @@ describe('Coleta de Lixo - API Ecourbis', () => {
       if (data.result.length > 0) {
         console.log('\n🗑️ INFORMAÇÕES DE COLETA REAIS ENCONTRADAS:');
         
-        data.result.forEach((item: any, index: number) => {
+        data.result.forEach((item: Record<string, unknown>, index: number) => {
           console.log(`\n📍 COLETA ${index + 1}:`);
           console.log(`   🆔 ID: ${item.id || 'Não informado'}`);
           console.log(`   📍 Endereço: ${item.endereco?.logradouro || 'Não informado'}`);
@@ -119,8 +120,8 @@ describe('Coleta de Lixo - API Ecourbis', () => {
         
         console.log(`\n📊 RESUMO REAL:`);
         console.log(`   📍 Total de pontos encontrados: ${data.result.length}`);
-        console.log(`   🗑️  Pontos com coleta domiciliar: ${data.result.filter((item: any) => item.domiciliar).length}`);
-        console.log(`   ♻️  Pontos com coleta seletiva: ${data.result.filter((item: any) => item.seletiva?.possue).length}`);
+        console.log(`   🗑️  Pontos com coleta domiciliar: ${data.result.filter((item: Record<string, unknown>) => item.domiciliar).length}`);
+        console.log(`   ♻️  Pontos com coleta seletiva: ${data.result.filter((item: Record<string, unknown>) => (item.seletiva as Record<string, unknown>)?.possue).length}`);
         
       } else {
         console.log('⚠️  Nenhuma informação de coleta encontrada para esta localização');
