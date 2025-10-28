@@ -246,8 +246,15 @@ export async function GET(request: NextRequest) {
       { nome: 'Apenas Rua', endereco: `${endereco.logradouro}, Brasil` }
     ];
     
+    // Interface para serviços de geocodificação
+    interface ServicoGeocoding {
+      nome: string;
+      headers?: Record<string, string>;
+      processarResposta: (data: unknown) => { lat: number; lng: number } | null;
+    }
+    
     // Lista de serviços de geocodificação - só incluir os que têm chaves configuradas
-    const servicosGeocoding = [
+    const servicosGeocoding: ServicoGeocoding[] = [
       {
         nome: 'Nominatim',
         headers: { 'User-Agent': 'ProcuraSP/1.0' },
@@ -271,7 +278,6 @@ export async function GET(request: NextRequest) {
     if (process.env.OPENCAGE_API_KEY) {
       servicosGeocoding.push({
         nome: 'OpenCage',
-        headers: {},
         processarResposta: (data: unknown) => {
           const geocodeData = data as {results?: Array<{geometry: {lat: string; lng: string}}>};
           return geocodeData && geocodeData.results && geocodeData.results.length > 0 ? {
@@ -286,7 +292,6 @@ export async function GET(request: NextRequest) {
     if (process.env.MAPBOX_ACCESS_TOKEN) {
       servicosGeocoding.push({
         nome: 'MapBox',
-        headers: {},
         processarResposta: (data: unknown) => {
           const geocodeData = data as {features?: Array<{center: [number, number]}>};
           return geocodeData && geocodeData.features && geocodeData.features.length > 0 ? {
