@@ -17,7 +17,7 @@ export default function ServicosPage() {
           </h1>
           <p className="text-xl text-white/90 max-w-2xl mx-auto">
             Conheça todos os serviços públicos que você pode consultar através
-            do Logo Ali
+            do Procura SP
           </p>
         </div>
 
