@@ -4,8 +4,6 @@ import * as cheerio from 'cheerio';
 
 // Configurar para ignorar certificados SSL problemáticos
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-  observacoes?: string;
-}
 
 /**
  * Serviço para buscar dados de Coleta de Lixo
