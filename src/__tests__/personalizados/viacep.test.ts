@@ -25,39 +25,33 @@ describe('Viacep', () => {
       const cep = dadosCoordenadas.coordenadas.cep;
       console.log(`📮 CEP carregado: ${cep}`);
       
-      // Para fins de teste, vamos simular a resposta esperada da API ViaCEP
-      // Baseado no CEP carregado do arquivo JSON
+      // TESTE REAL - Chamar API ViaCEP real
+      console.log('🌐 Fazendo requisição REAL para API ViaCEP...');
       
-      // Dados esperados da resposta ViaCEP para o CEP carregado
-      const mockResponse = {
-        cep: cep,
-        logradouro: "Rua Ateneu",
-        complemento: "",
-        unidade: "",
-        bairro: "Vila Moinho Velho",
-        localidade: "São Paulo",
-        uf: "SP",
-        estado: "São Paulo",
-        regiao: "Sudeste",
-      ibge: "3550308",
-      gia: "1004",
-      ddd: "11",
-      siafi: "7107"
-    };
-    
-    // Simular status HTTP 200
-    const httpStatus = 200;
-    
-    console.log('ViaCEP Simulated Response:', mockResponse);
-    console.log('HTTP Status:', httpStatus);
-    
-    // Verificar se o status é 200
-    expect(httpStatus).toBe(200);
-    
-    // Validar os campos específicos conforme solicitado
-    expect(mockResponse.logradouro).toBe('Rua Ateneu');
-    expect(mockResponse.bairro).toBe('Vila Moinho Velho');
-    expect(mockResponse.localidade).toBe('São Paulo');
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const httpStatus = response.status;
+      
+      console.log('📡 Status HTTP real:', httpStatus);
+      
+      if (!response.ok) {
+        throw new Error(`API ViaCEP retornou erro: ${httpStatus}`);
+      }
+      
+      const viacepData = await response.json();
+      console.log('📊 Resposta real da API ViaCEP:', viacepData);
+      
+      // Verificar se o status é 200
+      expect(httpStatus).toBe(200);
+      
+      // Validar se não há erro na resposta
+      expect(viacepData.erro).toBeUndefined();
+      
+      // Validar campos obrigatórios
+      expect(viacepData.cep).toBeDefined();
+      expect(viacepData.logradouro).toBeDefined();
+      expect(viacepData.bairro).toBeDefined();
+      expect(viacepData.localidade).toBeDefined();
+      expect(viacepData.uf).toBeDefined();
     
     console.log('✅ Teste ViaCEP: Todos os campos validados com sucesso!');
     

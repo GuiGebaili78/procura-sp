@@ -400,36 +400,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ cep: string }> },
 ) {
-  try {
-    const { cep } = await params;
-    const { searchParams } = new URL(request.url);
-    const numero = searchParams.get("numero");
-
-    if (!cep) {
-      return NextResponse.json(
-        { success: false, message: "CEP é obrigatório" },
-        { status: 400 },
-      );
-    }
-
-    const data = await viaCepService.buscarEnderecoPorCep(cep, numero || undefined);
-
-    return NextResponse.json({ success: true, data });
-  } catch (error: unknown) {
-    console.error(
-      "[API:CEP] Erro:",
-      error instanceof Error ? error.message : error,
-    );
-    
-    const errorMessage = error instanceof Error ? error.message : "Erro ao buscar CEP";
-    const statusCode = errorMessage === "CEP não encontrado" ? 404 : 500;
-    
-    return NextResponse.json(
-      {
-        success: false,
-        message: errorMessage,
-      },
-      { status: statusCode },
-    );
-  }
+  // API descontinuada - usar /api/viacep para coordenadas reais
+  return NextResponse.json(
+    { 
+      success: false,
+      message: "Esta API foi descontinuada. Use /api/viacep para obter coordenadas reais." 
+    },
+    { status: 410 }
+  );
 }

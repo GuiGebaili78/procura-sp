@@ -6,7 +6,6 @@ const createJestConfig = nextJest({
 
 const config = {
   testEnvironment: 'node', // Mudado para node para permitir requisições HTTP
-  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/jest.setup.ts'],
   testMatch: [
     '<rootDir>/src/__tests__/**/*.test.{js,jsx,ts,tsx}',
   ],

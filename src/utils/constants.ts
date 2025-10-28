@@ -1,20 +1,4 @@
-export const SAMPLE_STREETS = [
-  "Rua Augusta",
-  "Avenida Paulista",
-  "Rua Oscar Freire",
-  "Rua 25 de Março",
-  "Avenida Faria Lima",
-  "Rua da Consolação",
-  "Largo do Arouche",
-  "Rua Direita",
-  "Avenida São João",
-  "Rua Barão de Itapetininga",
-  "Rua do Carmo",
-  "Praça da Sé",
-  "Avenida Rebouças",
-  "Rua Haddock Lobo",
-  "Rua Estados Unidos",
-];
+// SAMPLE_STREETS removido - usar apenas dados reais
 
 export const SERVICE_TYPES = [
   { value: "coleta-lixo", label: "Coleta de Lixo" },

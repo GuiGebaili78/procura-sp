@@ -51,101 +51,79 @@ describe('Coleta de Lixo - API Ecourbis', () => {
       console.log('\n📡 ETAPA 3: Fazendo Requisição GET');
       console.log('🔍 Enviando requisição para API Ecourbis...');
       
-      // Para teste, vamos simular a resposta da API Ecourbis
-      // devido a problemas de certificado SSL no ambiente de teste
-      console.log('⚠️  Simulando resposta da API devido a problemas de SSL no ambiente de teste');
+      // TESTE REAL - Chamar API Ecourbis real
+      console.log('🌐 Fazendo requisição REAL para API Ecourbis...');
       
-      const mockResponse = {
-        status: 200,
-        headers: new Map([
-          ['content-type', 'application/json'],
-          ['access-control-allow-origin', '*']
-        ]),
-        json: async () => [
-          {
-            tipo: 'comum',
-            endereco: 'Rua Ateneu, 22 - Vila Moinho Velho',
-            dias: ['Segunda-feira', 'Quarta-feira', 'Sexta-feira'],
-            horarios: ['07:00 às 12:00'],
-            frequencia: 'Diária',
-            observacoes: 'Coleta de lixo comum'
-          },
-          {
-            tipo: 'seletiva',
-            endereco: 'Rua Ateneu, 22 - Vila Moinho Velho',
-            dias: ['Terça-feira', 'Quinta-feira'],
-            horarios: ['08:00 às 11:00'],
-            frequencia: 'Alternada',
-            observacoes: 'Coleta seletiva de recicláveis'
-          }
-        ]
-      };
+      // Configurar para ignorar certificados SSL problemáticos
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
       
-      const response = mockResponse;
+      // Usar axios que lida melhor com certificados SSL
+      const axios = require('axios');
+      
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 10000,
+        httpsAgent: new (require('https').Agent)({
+          rejectUnauthorized: false
+        })
+      });
       
       // Etapa 4: Validar status da resposta
       console.log('\n✅ ETAPA 4: Validação da Resposta');
       console.log(`📊 Status HTTP: ${response.status}`);
-      console.log(`📋 Headers:`, Object.fromEntries(response.headers.entries()));
+      console.log(`📋 Headers:`, response.headers);
       
       // Validar se a resposta tem status 200 OK
       expect(response.status).toBe(200);
       console.log('✅ Status 200 OK confirmado!');
       
-      // Etapa 5: Processar e validar dados da resposta
-      console.log('\n📊 ETAPA 5: Processamento dos Dados');
+      // Etapa 5: Processar e validar dados da resposta REAL
+      console.log('\n📊 ETAPA 5: Processamento dos Dados REAIS');
       
-      const data = await response.json();
-      console.log('📄 Resposta da API:', JSON.stringify(data, null, 2));
+      const data = response.data;
+      console.log('📄 Resposta REAL da API Ecourbis:', JSON.stringify(data, null, 2));
       
-      // Validar estrutura da resposta
+      // Validar estrutura da resposta REAL da API Ecourbis
       expect(data).toBeDefined();
+      expect(data.query).toBeDefined();
+      expect(data.result).toBeDefined();
+      expect(Array.isArray(data.result)).toBe(true);
       
-      // Se a resposta é um array, validar estrutura
-      if (Array.isArray(data)) {
-        console.log(`📊 Total de itens retornados: ${data.length}`);
+      console.log(`📊 Total de itens retornados: ${data.result.length}`);
+      console.log(`🔍 Query usada:`, data.query);
+      
+      if (data.result.length > 0) {
+        console.log('\n🗑️ INFORMAÇÕES DE COLETA REAIS ENCONTRADAS:');
         
-        if (data.length > 0) {
-          console.log('\n🗑️ INFORMAÇÕES DE COLETA ENCONTRADAS:');
+        data.result.forEach((item: any, index: number) => {
+          console.log(`\n📍 COLETA ${index + 1}:`);
+          console.log(`   🆔 ID: ${item.id || 'Não informado'}`);
+          console.log(`   📍 Endereço: ${item.endereco?.logradouro || 'Não informado'}`);
+          console.log(`   🏘️  Distrito: ${item.endereco?.distrito || 'Não informado'}`);
+          console.log(`   📏 Distância: ${item.distancia || 'Não informada'} metros`);
           
-          data.forEach((item: unknown, index: number) => {
-            console.log(`\n📍 COLETA ${index + 1}:`);
-            
-            // Type guard para validar estrutura do item
-            if (item && typeof item === 'object') {
-              const coletaItem = item as Record<string, unknown>;
-              
-              console.log(`   🏷️  Tipo: ${coletaItem.tipo || 'Não informado'}`);
-              console.log(`   📍 Endereço: ${coletaItem.endereco || 'Não informado'}`);
-              console.log(`   📅 Dias: ${Array.isArray(coletaItem.dias) ? coletaItem.dias.join(', ') : coletaItem.dias || 'Não informado'}`);
-              console.log(`   ⏰ Horários: ${Array.isArray(coletaItem.horarios) ? coletaItem.horarios.join(', ') : coletaItem.horarios || 'Não informado'}`);
-              console.log(`   🔄 Frequência: ${coletaItem.frequencia || 'Não informada'}`);
-              console.log(`   📝 Observações: ${coletaItem.observacoes || 'Nenhuma'}`);
-            }
-          });
+          // Coleta Domiciliar
+          if (item.domiciliar) {
+            console.log(`   🗑️  Domiciliar: ${item.domiciliar.frequencia || 'Não informada'}`);
+            console.log(`   ⏰ Horários Domiciliar:`, item.domiciliar.horarios);
+          }
           
-          // Separar coleta comum e seletiva
-          const coletaComum = data.filter((item: unknown) => {
-            const coletaItem = item as Record<string, unknown>;
-            return coletaItem.tipo === 'comum' || coletaItem.tipo === 'orgânico';
-          });
-          
-          const coletaSeletiva = data.filter((item: unknown) => {
-            const coletaItem = item as Record<string, unknown>;
-            return coletaItem.tipo === 'seletiva' || coletaItem.tipo === 'reciclável';
-          });
-          
-          console.log(`\n📊 RESUMO:`);
-          console.log(`   🗑️  Coleta Comum: ${coletaComum.length} item(s)`);
-          console.log(`   ♻️  Coleta Seletiva: ${coletaSeletiva.length} item(s)`);
-          
-        } else {
-          console.log('⚠️  Nenhuma informação de coleta encontrada para esta localização');
-        }
+          // Coleta Seletiva
+          if (item.seletiva && item.seletiva.possue) {
+            console.log(`   ♻️  Seletiva: ${item.seletiva.frequencia || 'Não informada'}`);
+            console.log(`   ⏰ Horários Seletiva:`, item.seletiva.horarios);
+          }
+        });
+        
+        console.log(`\n📊 RESUMO REAL:`);
+        console.log(`   📍 Total de pontos encontrados: ${data.result.length}`);
+        console.log(`   🗑️  Pontos com coleta domiciliar: ${data.result.filter((item: any) => item.domiciliar).length}`);
+        console.log(`   ♻️  Pontos com coleta seletiva: ${data.result.filter((item: any) => item.seletiva?.possue).length}`);
         
       } else {
-        console.log('⚠️  Resposta não é um array - formato inesperado');
-        console.log('📄 Tipo da resposta:', typeof data);
+        console.log('⚠️  Nenhuma informação de coleta encontrada para esta localização');
       }
       
       // Etapa 6: Validação final

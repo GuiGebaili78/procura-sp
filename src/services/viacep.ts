@@ -1,4 +1,3 @@
-import axios from "axios";
 import { API_ENDPOINTS } from "../utils/constants";
 import { ViaCepResponse } from "../types/location";
 
@@ -19,27 +18,45 @@ export async function fetchCep(cep: string, numero?: string): Promise<ViaCepResp
   }
 
   try {
-    // A requisição é feita para a rota do nosso próprio backend
-    const url = numero 
-      ? `${BACKEND_API_URL}/cep/${normalizedCep}?numero=${numero}`
-      : `${BACKEND_API_URL}/cep/${normalizedCep}`;
+    // Usar a nova API /api/viacep que retorna coordenadas reais
+    const url = `${BACKEND_API_URL}/viacep?cep=${normalizedCep}`;
     
-    const response = await axios.get(url);
+    console.log(`🔍 [fetchCep] Buscando CEP: ${normalizedCep} em ${url}`);
+    
+    const response = await fetch(url);
 
-    // A resposta do backend já vem com a estrutura { success, data, meta }
-    if (response.data && response.data.success) {
-      return response.data.data;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    console.log(`✅ [fetchCep] Resposta recebida:`, data);
+
+    // A resposta da nova API vem com a estrutura { success, endereco, coordenadas, fonte }
+    if (data && data.success) {
+      return {
+        cep: data.endereco.cep,
+        logradouro: data.endereco.logradouro,
+        bairro: data.endereco.bairro,
+        localidade: data.endereco.localidade,
+        uf: data.endereco.uf,
+        latitude: data.coordenadas?.lat,
+        longitude: data.coordenadas?.lng,
+        numero: numero || undefined
+      };
     } else {
-      throw new Error(response.data.message || "Ocorreu um erro no servidor.");
+      throw new Error(data.error || "Ocorreu um erro ao buscar o CEP.");
     }
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
-      // Repassa a mensagem de erro específica do backend para o frontend
-      throw new Error(
-        error.response.data.message || "Não foi possível buscar o CEP.",
-      );
+    console.error("❌ [fetchCep] Erro:", error);
+    
+    if (error instanceof Error) {
+      throw error;
     }
-    // Erro genérico de conexão
-    throw new Error("Falha de conexão com o servidor.");
+    
+    // Erro genérico
+    throw new Error("Falha ao buscar o CEP. Verifique sua conexão.");
   }
 }

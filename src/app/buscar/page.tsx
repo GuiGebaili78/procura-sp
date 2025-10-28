@@ -3,17 +3,23 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { SearchBarRefactored as SearchBar } from "../../components/search/SearchBarRefactored";
-import { ServiceSelector } from "../../components/search/ServiceSelector";
-import { ServicesList } from "../../components/services/ServicesList";
 import { Layout } from "../../components/layout/Layout";
+import { Card } from "../../components/ui/Card";
+import { Tabs, TabPanel, Tab } from "../../components/ui/Tabs";
+import { CepSearchSimple } from "../../components/search/CepSearchSimple";
+import { ServicesList } from "../../components/services/ServicesList";
+import { HealthLayerSelector } from "../../components/health/HealthLayerSelector";
 import { CataBagulhoResult, TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
 import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
+import { FiltroSaude } from "../../types/saude";
 import { fetchTrechoCoordinates } from "../../services/trechoService";
-import { Card } from "../../components/ui/Card";
-import { FeirasSkeletonLoading, CataBagulhoSkeletonLoading } from "../../components/ui/SkeletonLoading";
+import { searchCataBagulho } from "../../services/api";
+import {
+  FeirasSkeletonLoading,
+  CataBagulhoSkeletonLoading,
+} from "../../components/ui/SkeletonLoading";
 
 // Dynamic import do mapa para evitar problemas de SSR
 const MapView = dynamic(
@@ -27,7 +33,7 @@ const MapView = dynamic(
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="p-4 gradient-secondary">
           <h3 className="text-lg font-semibold text-white">
-            Localização e Trecho
+            Localização e Mapa
           </h3>
         </div>
         <div className="h-96 w-full flex items-center justify-center bg-gray-100">
@@ -35,138 +41,309 @@ const MapView = dynamic(
         </div>
       </div>
     ),
-  },
+  }
 );
+
+// Definição das abas de serviços
+const SERVICE_TABS: Tab[] = [
+  { id: "cata-bagulho", label: "Cata-Bagulho", icon: "🚛" },
+  { id: "feiras-livres", label: "Feiras Livres", icon: "🍎" },
+  { id: "coleta-lixo", label: "Coleta de Lixo", icon: "🗑️" },
+  { id: "saude", label: "Saúde Pública", icon: "🏥" },
+];
 
 function BuscarPageContent() {
   const searchParams = useSearchParams();
-  const [searchResults, setSearchResults] = useState<CataBagulhoResult[]>([]);
+  
+  // Estado do endereço
+  const [addressData, setAddressData] = useState<{
+    cep: string;
+    numero: string;
+    endereco: {
+      logradouro: string;
+      bairro: string;
+      localidade: string;
+      uf: string;
+    };
+    coordinates: { lat: number; lng: number };
+  } | null>(null);
+
+  // Estado dos serviços
+  const [activeTab, setActiveTab] = useState<string>("cata-bagulho");
+  const [cataBagulhoResults, setCataBagulhoResults] = useState<CataBagulhoResult[]>([]);
   const [feirasResults, setFeirasResults] = useState<FeiraLivre[]>([]);
   const [coletaLixoResults, setColetaLixoResults] = useState<ColetaLixoResponse | undefined>(undefined);
   const [saudeResults, setSaudeResults] = useState<EstabelecimentoSaude[]>([]);
-  const [userCoordinates, setUserCoordinates] = useState<{
-    lat: number;
-    lng: number;
-  } | undefined>(undefined);
-  const [userAddress, setUserAddress] = useState<string>("");
-  const [trechoCoordinates, setTrechoCoordinates] =
-    useState<TrechoCoordinates | null>(null);
+  
+  // Estados de carregamento e erro
+  const [loadingService, setLoadingService] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string>("");
+  const [trechoCoordinates, setTrechoCoordinates] = useState<TrechoCoordinates | null>(null);
   const [loadingTrecho, setLoadingTrecho] = useState(false);
-  const [loadingSearch, setLoadingSearch] = useState(false);
-  const [selectedService, setSelectedService] =
-    useState<string>("cata-bagulho");
-  const [currentServiceType, setCurrentServiceType] = useState<string>("cata-bagulho");
   const [selectedFeiraId, setSelectedFeiraId] = useState<string | undefined>(undefined);
+
+  // Filtros de saúde
+  const [filtrosSaude, setFiltrosSaude] = useState<FiltroSaude>({
+    ubs: true,
+    hospitais: true,
+    postos: false,
+    farmacias: false,
+    maternidades: false,
+    urgencia: false,
+    academias: false,
+    caps: false,
+    saudeBucal: false,
+    doencasRaras: false,
+    ama: false,
+    programas: false,
+    diagnostico: false,
+    ambulatorio: false,
+    supervisao: false,
+    residencia: false,
+    reabilitacao: false,
+    apoio: false,
+    clinica: false,
+    dst: false,
+    prontoSocorro: false,
+    testagem: false,
+    auditiva: false,
+    horaCerta: false,
+    idoso: false,
+    laboratorio: false,
+    trabalhador: false,
+    apoioDiagnostico: false,
+    apoioTerapeutico: false,
+    instituto: false,
+    apae: false,
+    referencia: false,
+    imagem: false,
+    nutricao: false,
+    reabilitacaoGeral: false,
+    nefrologia: false,
+    odontologica: false,
+    saudeMental: false,
+    referenciaGeral: false,
+    medicinas: false,
+    hemocentro: false,
+    zoonoses: false,
+    laboratorioZoo: false,
+    casaParto: false,
+    sexual: false,
+    dstUad: false,
+    capsInfantil: false,
+    ambulatorios: false,
+    programasGerais: false,
+    tradicionais: false,
+    dependente: false,
+    municipal: true,
+    estadual: true,
+    privado: true
+  });
 
   // Verificar parâmetros da URL para pré-selecionar serviço
   useEffect(() => {
-    const serviceParam = searchParams.get('service');
-    if (serviceParam === 'feiras-livres') {
-      setSelectedService('feiras-livres');
-      setCurrentServiceType('feiras-livres');
-    } else if (serviceParam === 'coleta-lixo') {
-      setSelectedService('coleta-lixo');
-      setCurrentServiceType('coleta-lixo');
-    } else if (serviceParam === 'saude') {
-      setSelectedService('saude');
-      setCurrentServiceType('saude');
+    const serviceParam = searchParams.get("service");
+    if (serviceParam && ["cata-bagulho", "feiras-livres", "coleta-lixo", "saude"].includes(serviceParam)) {
+      setActiveTab(serviceParam);
     }
   }, [searchParams]);
 
-  const handleSearchResults = (
-    results: CataBagulhoResult[] | FeiraLivre[] | ColetaLixoResponse | EstabelecimentoSaude[],
-    coordinates: { lat: number; lng: number },
-    serviceType: string,
-    address?: string
-  ) => {
-    console.log("🎯 [BuscarPage] Recebendo resultados:");
-    console.log("🎯 [BuscarPage] - Resultados:", results);
-    console.log("🎯 [BuscarPage] - Coordenadas:", coordinates);
-    console.log("🎯 [BuscarPage] - Tipo de serviço:", serviceType);
-    console.log("🎯 [BuscarPage] - Endereço:", address);
-    
-    setLoadingSearch(false);
-    
-    if (serviceType === "cata-bagulho") {
-      setSearchResults(results as CataBagulhoResult[]);
-      setFeirasResults([]);
-      setColetaLixoResults(undefined);
-      setSaudeResults([]);
-    } else if (serviceType === "feiras-livres") {
-      setFeirasResults(results as FeiraLivre[]);
-      setSearchResults([]);
-      setColetaLixoResults(undefined);
-      setSaudeResults([]);
-    } else if (serviceType === "coleta-lixo") {
-      setColetaLixoResults(results as ColetaLixoResponse);
-      setSearchResults([]);
-      setFeirasResults([]);
-      setSaudeResults([]);
-    } else if (serviceType === "saude") {
-      setSaudeResults(results as EstabelecimentoSaude[]);
-      setSearchResults([]);
-      setFeirasResults([]);
-      setColetaLixoResults(undefined);
+  // Carregar dados do serviço quando a aba mudar
+  useEffect(() => {
+    if (addressData && !loadingService[activeTab]) {
+      loadServiceData(activeTab);
     }
-    
-    console.log("🎯 [BuscarPage] Definindo coordenadas do usuário:", coordinates);
-    setUserCoordinates(coordinates);
-    setUserAddress(address || "");
-    setCurrentServiceType(serviceType);
-    setTrechoCoordinates(null); // Limpa trecho anterior
-    setSelectedFeiraId(undefined); // Limpa seleção de feira anterior
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, addressData]);
+
+  const handleAddressFound = (
+    cep: string,
+    numero: string,
+    endereco: { logradouro: string; bairro: string; localidade: string; uf: string },
+    coordinates: { lat: number; lng: number }
+  ) => {
+    setAddressData({ cep, numero, endereco, coordinates });
+    setError("");
+    // Carregar dados do serviço ativo
+    loadServiceData(activeTab, { cep, numero, endereco, coordinates });
+  };
+
+  const loadServiceData = async (
+    serviceType: string,
+    data?: {
+      cep: string;
+      numero: string;
+      endereco: { logradouro: string; bairro: string; localidade: string; uf: string };
+      coordinates: { lat: number; lng: number };
+    }
+  ) => {
+    const currentData = data || addressData;
+    if (!currentData) return;
+
+    // Verificar se já carregou este serviço
+    if (
+      (serviceType === "cata-bagulho" && cataBagulhoResults.length > 0) ||
+      (serviceType === "feiras-livres" && feirasResults.length > 0) ||
+      (serviceType === "coleta-lixo" && coletaLixoResults) ||
+      (serviceType === "saude" && saudeResults.length > 0)
+    ) {
+      return; // Já tem dados carregados
+    }
+
+    setLoadingService({ ...loadingService, [serviceType]: true });
     setError("");
 
-    // Auto-scroll para os resultados
-    setTimeout(() => {
-      const resultsSection = document.getElementById("resultados-section");
-      if (resultsSection) {
-        resultsSection.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
+    try {
+      const { coordinates, numero, endereco } = currentData;
+      const enderecoCompleto = `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
+
+      switch (serviceType) {
+        case "cata-bagulho":
+          const cataBagulhoData = await searchCataBagulho(coordinates.lat, coordinates.lng);
+          setCataBagulhoResults(cataBagulhoData || []);
+          break;
+
+        case "feiras-livres":
+          console.log('🔍 [BuscarPage] Buscando feiras livres...');
+          const feirasResponse = await fetch('/api/feiras', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lat: coordinates.lat,
+              lng: coordinates.lng,
+              raio: 5 // 5km de raio
+            })
+          });
+          const feirasData = await feirasResponse.json();
+          console.log('📊 [BuscarPage] Resposta feiras:', feirasData);
+          
+          // A API retorna { success, data: { feiras, total, ... } }
+          if (feirasData.success && feirasData.data) {
+            const feiras = feirasData.data.feiras || [];
+            console.log(`✅ [BuscarPage] ${feiras.length} feiras encontradas`);
+            setFeirasResults(feiras);
+          } else {
+            console.log('⚠️ [BuscarPage] Nenhuma feira encontrada');
+            setFeirasResults([]);
+          }
+          break;
+
+        case "coleta-lixo":
+          const coletaResponse = await fetch('/api/coleta-lixo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endereco: enderecoCompleto,
+              numero,
+              latitude: coordinates.lat,
+              longitude: coordinates.lng
+            })
+          });
+          const coletaData = await coletaResponse.json();
+          setColetaLixoResults(coletaData.success ? coletaData.data : undefined);
+          break;
+
+        case "saude":
+          console.log('🔍 [BuscarPage] Buscando estabelecimentos de saúde...');
+          const saudeResponse = await fetch('/api/saude', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lat: coordinates.lat,
+              lng: coordinates.lng,
+              raio: 5 // 5km (a API espera em KM, não metros)
+            })
+          });
+          const saudeData = await saudeResponse.json();
+          console.log('📊 [BuscarPage] Resposta saúde:', saudeData);
+          
+          // A API retorna { success, data: { estabelecimentos, total, ... } }
+          if (saudeData.success && saudeData.data) {
+            const estabelecimentos = saudeData.data.estabelecimentos || [];
+            console.log(`✅ [BuscarPage] ${estabelecimentos.length} estabelecimentos encontrados`);
+            setSaudeResults(estabelecimentos);
+          } else {
+            console.log('⚠️ [BuscarPage] Nenhum estabelecimento encontrado');
+            setSaudeResults([]);
+          }
+          break;
       }
-    }, 100);
-  };
-
-  const handleError = (errorMessage: string) => {
-    setLoadingSearch(false);
-    setError(errorMessage);
-    setSearchResults([]);
-    setTrechoCoordinates(null);
-  };
-
-  const handleSearchStart = () => {
-    setLoadingSearch(true);
-    setError("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao carregar serviço";
+      console.error("Erro ao carregar serviço:", error);
+      setError(message);
+    } finally {
+      setLoadingService({ ...loadingService, [serviceType]: false });
+    }
   };
 
   const handleVerTrecho = async (trechoId: string) => {
     setLoadingTrecho(true);
     try {
-      // Se for feira livre (detectado pelo prefixo ou tipo de serviço), não busca trecho
-      if (currentServiceType === "feiras-livres" || trechoId.startsWith("feira-")) {
-        // Para feiras, definir a feira selecionada para mostrar a rota
+      if (activeTab === "feiras-livres" || trechoId.startsWith("feira-")) {
         setSelectedFeiraId(trechoId);
         setTrechoCoordinates(null);
         setError("");
       } else {
-        // Para cata-bagulho, busca as coordenadas do trecho
         const trecho = await fetchTrechoCoordinates(trechoId);
         setTrechoCoordinates(trecho);
-        setSelectedFeiraId(undefined); // Limpar seleção de feira
+        setSelectedFeiraId(undefined);
         setError("");
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Erro ao carregar trecho";
+      const message = error instanceof Error ? error.message : "Erro ao carregar trecho";
       setError(`Erro ao carregar trecho: ${message}`);
       setTrechoCoordinates(null);
       setSelectedFeiraId(undefined);
     } finally {
       setLoadingTrecho(false);
     }
+  };
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setTrechoCoordinates(null);
+    setSelectedFeiraId(undefined);
+    setError("");
+  };
+
+  // Buscar estabelecimentos de saúde em tempo real quando filtros mudarem
+  const buscarSaudeTempoReal = async (novosFiltros: FiltroSaude) => {
+    if (!addressData) return;
+
+    setLoadingService({ ...loadingService, saude: true });
+    try {
+      console.log('🔄 [BuscarPage] Aplicando filtros de saúde em tempo real...', novosFiltros);
+      const saudeResponse = await fetch('/api/saude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lat: addressData.coordinates.lat,
+          lng: addressData.coordinates.lng,
+          raio: 5 // 5km (a API espera em KM, não metros)
+        })
+      });
+      const saudeData = await saudeResponse.json();
+      
+      if (saudeData.success && saudeData.data) {
+        const estabelecimentos = saudeData.data.estabelecimentos || [];
+        console.log(`✅ [BuscarPage] ${estabelecimentos.length} estabelecimentos após filtro`);
+        setSaudeResults(estabelecimentos);
+      } else {
+        setSaudeResults([]);
+      }
+    } catch (error) {
+      console.error("❌ [BuscarPage] Erro ao buscar estabelecimentos em tempo real:", error);
+      setSaudeResults([]);
+    } finally {
+      setLoadingService({ ...loadingService, saude: false });
+    }
+  };
+
+  const getEnderecoCompleto = () => {
+    if (!addressData) return "";
+    const { endereco, numero } = addressData;
+    return `${endereco.logradouro}, ${numero} - ${endereco.bairro}, ${endereco.localidade} - ${endereco.uf}`;
   };
 
   return (
@@ -177,7 +354,7 @@ function BuscarPageContent() {
             Buscar Serviços Públicos
           </h1>
           <p className="text-white/90 text-center text-lg">
-            Encontre serviços de Cata-Bagulho próximos ao seu endereço
+            Digite seu CEP para encontrar serviços próximos ao seu endereço
           </p>
         </div>
 
@@ -190,156 +367,276 @@ function BuscarPageContent() {
           </div>
         )}
 
-        <Card padding="md" className="mb-6">
-          <ServiceSelector
-            selectedService={selectedService}
-            onServiceChange={setSelectedService}
-          />
-        </Card>
-
-        <SearchBar
-          selectedService={selectedService}
-          onSearchResults={handleSearchResults}
-          onError={handleError}
-          onSearchStart={handleSearchStart}
-          currentCoordinates={userCoordinates}
-          currentAddress={userAddress}
+        {/* Busca de CEP - Sempre visível */}
+        <CepSearchSimple
+          onAddressFound={handleAddressFound}
+          onError={setError}
         />
 
-        {/* Para Saúde Pública: mostrar apenas o mapa */}
-        {currentServiceType === "saude" ? (
-          <div className="space-y-6">
-            {loadingSearch && (
-              <Card padding="md">
-                <h2 className="text-2xl font-bold text-dark-primary mb-4">
-                  Buscando estabelecimentos de saúde...
-                </h2>
-                <div className="flex items-center justify-center py-8">
-                  <div className="spinner w-8 h-8"></div>
-                </div>
-              </Card>
-            )}
-
-            {userCoordinates && (
-              <MapView
-                center={[userCoordinates.lat, userCoordinates.lng]}
-                userLocation={[userCoordinates.lat, userCoordinates.lng]}
-                userAddress={userAddress}
-                trechoCoordinates={trechoCoordinates}
-                className="w-full h-[600px]"
-                isFeira={false}
-                feiras={[]}
-                selectedFeiraId={undefined}
-                isSaude={true}
-                estabelecimentosSaude={saudeResults}
-              />
-            )}
-
-            {!userCoordinates && !loadingSearch && (
-              <Card padding="lg" className="text-center">
-                <div className="text-6xl mb-4">🏥</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Estabelecimentos de Saúde
+        {/* Abas de Serviços - Aparece após buscar o endereço */}
+        {addressData && (
+          <div className="mt-8">
+            <Card padding="none" className="overflow-hidden">
+              {/* Cabeçalho com endereço */}
+              <div className="p-6 bg-gradient-to-r from-primary to-secondary">
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  📍 Endereço Selecionado
                 </h3>
-                <p className="text-gray-600">
-                  Digite seu CEP e número para encontrar estabelecimentos de saúde na sua região.
-                </p>
-              </Card>
-            )}
-          </div>
-        ) : (
-          /* Para outros serviços: layout original com cartões */
-          <div
-            id="resultados-section"
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-          >
-            {/* Coluna dos Resultados */}
-            <div className="space-y-6">
-              {loadingSearch && (
-                <Card padding="md">
-                  <h2 className="text-2xl font-bold text-dark-primary mb-4">
-                    Buscando...
-                  </h2>
-                  {currentServiceType === "feiras-livres" ? (
-                    <FeirasSkeletonLoading />
-                  ) : (
-                    <CataBagulhoSkeletonLoading />
-                  )}
-                </Card>
-              )}
+                <p className="text-white/90">{getEnderecoCompleto()}</p>
+              </div>
 
-              {!loadingSearch && (searchResults.length > 0 || feirasResults.length > 0 || coletaLixoResults) && (
-                <Card padding="md">
-                  <h2 className="text-2xl font-bold text-dark-primary mb-4">
-                    Resultados Encontrados ({searchResults.length + feirasResults.length + (coletaLixoResults ? 1 : 0)})
-                  </h2>
-                  <ServicesList
-                    services={searchResults}
-                    feiras={feirasResults}
-                    coletaLixo={coletaLixoResults}
-                    estabelecimentosSaude={[]}
-                    serviceType={currentServiceType}
-                    onViewTrecho={handleVerTrecho}
-                    selectedFeiraId={selectedFeiraId}
-                  />
-                </Card>
-              )}
+              {/* Abas de Serviços */}
+              <div className="px-6 pt-4">
+                <Tabs tabs={SERVICE_TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+              </div>
 
-              {!loadingSearch && searchResults.length === 0 && feirasResults.length === 0 && !coletaLixoResults && !error && (
-                <Card padding="lg" className="text-center">
-                  <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Faça uma busca
-                  </h3>
-                  <p className="text-gray-600">
-                    Digite seu CEP e número para encontrar {selectedService === "cata-bagulho" ? "serviços de Cata-Bagulho" : selectedService === "feiras-livres" ? "feiras livres" : "informações de coleta de lixo"} na sua região.
-                  </p>
-                </Card>
-              )}
-            </div>
+              {/* Conteúdo das Abas */}
+              <TabPanel>
+                <div className="px-6 pb-6">
+                  {/* Aba Cata-Bagulho */}
+                  {activeTab === "cata-bagulho" && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div>
+                        {loadingService["cata-bagulho"] && (
+                          <div className="mb-4">
+                            <h3 className="text-xl font-bold text-dark-primary mb-4">
+                              Buscando serviços de Cata-Bagulho...
+                            </h3>
+                            <CataBagulhoSkeletonLoading />
+                          </div>
+                        )}
 
-            {/* Coluna do Mapa */}
-            <div className="space-y-6">
-              {userCoordinates && (
-                <>
-                  {loadingTrecho && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                      <div className="flex items-center">
-                        <div className="spinner w-4 h-4 mr-3"></div>
-                        <p className="text-blue-700 font-medium">
-                          Carregando trecho...
-                        </p>
+                        {!loadingService["cata-bagulho"] && cataBagulhoResults.length > 0 && (
+                          <>
+                            <h3 className="text-xl font-bold text-dark-primary mb-4">
+                              Resultados ({cataBagulhoResults.length})
+                            </h3>
+                            <ServicesList
+                              services={cataBagulhoResults}
+                              feiras={[]}
+                              coletaLixo={undefined}
+                              estabelecimentosSaude={[]}
+                              serviceType="cata-bagulho"
+                              onViewTrecho={handleVerTrecho}
+                              selectedFeiraId={undefined}
+                            />
+                          </>
+                        )}
+
+                        {!loadingService["cata-bagulho"] && cataBagulhoResults.length === 0 && (
+                          <div className="text-center py-8">
+                            <div className="text-6xl mb-4">🚛</div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                              Nenhum resultado encontrado
+                            </h3>
+                            <p className="text-gray-600">
+                              Não foram encontrados serviços de Cata-Bagulho para este endereço.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        {loadingTrecho && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                            <div className="flex items-center">
+                              <div className="spinner w-4 h-4 mr-3"></div>
+                              <p className="text-blue-700 font-medium">Carregando trecho...</p>
+                            </div>
+                          </div>
+                        )}
+                        <MapView
+                          center={[addressData.coordinates.lat, addressData.coordinates.lng]}
+                          userLocation={[addressData.coordinates.lat, addressData.coordinates.lng]}
+                          userAddress={getEnderecoCompleto()}
+                          trechoCoordinates={trechoCoordinates}
+                          className="sticky top-4"
+                          isFeira={false}
+                          feiras={[]}
+                          selectedFeiraId={undefined}
+                          isSaude={false}
+                          estabelecimentosSaude={[]}
+                        />
                       </div>
                     </div>
                   )}
 
-                  <MapView
-                    center={[userCoordinates.lat, userCoordinates.lng]}
-                    userLocation={[userCoordinates.lat, userCoordinates.lng]}
-                    userAddress={userAddress}
-                    trechoCoordinates={trechoCoordinates}
-                    className="sticky top-4"
-                    isFeira={currentServiceType === "feiras-livres"}
-                    feiras={currentServiceType === "feiras-livres" ? feirasResults : []}
-                    selectedFeiraId={selectedFeiraId}
-                    isSaude={false}
-                    estabelecimentosSaude={[]}
-                  />
-                </>
-              )}
+                  {/* Aba Feiras Livres */}
+                  {activeTab === "feiras-livres" && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div>
+                        {loadingService["feiras-livres"] && (
+                          <div className="mb-4">
+                            <h3 className="text-xl font-bold text-dark-primary mb-4">
+                              Buscando feiras livres...
+                            </h3>
+                            <FeirasSkeletonLoading />
+                          </div>
+                        )}
 
-              {!userCoordinates && (
-                <Card padding="lg" className="text-center">
-                  <div className="text-6xl mb-4">🗺️</div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Mapa da Região
-                  </h3>
-                  <p className="text-gray-600">
-                    O mapa será exibido aqui após você fazer uma busca.
-                  </p>
-                </Card>
-              )}
-            </div>
+                        {!loadingService["feiras-livres"] && feirasResults.length > 0 && (
+                          <>
+                            <h3 className="text-xl font-bold text-dark-primary mb-4">
+                              Resultados ({feirasResults.length})
+                            </h3>
+                            <ServicesList
+                              services={[]}
+                              feiras={feirasResults}
+                              coletaLixo={undefined}
+                              estabelecimentosSaude={[]}
+                              serviceType="feiras-livres"
+                              onViewTrecho={handleVerTrecho}
+                              selectedFeiraId={selectedFeiraId}
+                            />
+                          </>
+                        )}
+
+                        {!loadingService["feiras-livres"] && feirasResults.length === 0 && (
+                          <div className="text-center py-8">
+                            <div className="text-6xl mb-4">🍎</div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                              Nenhuma feira encontrada
+                            </h3>
+                            <p className="text-gray-600">
+                              Não foram encontradas feiras livres próximas a este endereço.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <MapView
+                          center={[addressData.coordinates.lat, addressData.coordinates.lng]}
+                          userLocation={[addressData.coordinates.lat, addressData.coordinates.lng]}
+                          userAddress={getEnderecoCompleto()}
+                          trechoCoordinates={null}
+                          className="sticky top-4"
+                          isFeira={true}
+                          feiras={feirasResults}
+                          selectedFeiraId={selectedFeiraId}
+                          isSaude={false}
+                          estabelecimentosSaude={[]}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Aba Coleta de Lixo */}
+                  {activeTab === "coleta-lixo" && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div>
+                        {loadingService["coleta-lixo"] && (
+                          <div className="mb-4">
+                            <h3 className="text-xl font-bold text-dark-primary mb-4">
+                              Buscando informações de coleta...
+                            </h3>
+                            <div className="flex items-center justify-center py-8">
+                              <div className="spinner w-8 h-8"></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {!loadingService["coleta-lixo"] && coletaLixoResults && (
+                          <>
+                            <h3 className="text-xl font-bold text-dark-primary mb-4">
+                              Informações de Coleta
+                            </h3>
+                            <ServicesList
+                              services={[]}
+                              feiras={[]}
+                              coletaLixo={coletaLixoResults}
+                              estabelecimentosSaude={[]}
+                              serviceType="coleta-lixo"
+                              onViewTrecho={handleVerTrecho}
+                              selectedFeiraId={undefined}
+                            />
+                          </>
+                        )}
+
+                        {!loadingService["coleta-lixo"] && !coletaLixoResults && (
+                          <div className="text-center py-8">
+                            <div className="text-6xl mb-4">🗑️</div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                              Nenhuma informação encontrada
+                            </h3>
+                            <p className="text-gray-600">
+                              Não foram encontradas informações de coleta para este endereço.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <MapView
+                          center={[addressData.coordinates.lat, addressData.coordinates.lng]}
+                          userLocation={[addressData.coordinates.lat, addressData.coordinates.lng]}
+                          userAddress={getEnderecoCompleto()}
+                          trechoCoordinates={null}
+                          className="sticky top-4"
+                          isFeira={false}
+                          feiras={[]}
+                          selectedFeiraId={undefined}
+                          isSaude={false}
+                          estabelecimentosSaude={[]}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Aba Saúde Pública */}
+                  {activeTab === "saude" && (
+                    <div className="space-y-6">
+                      {/* Filtros de Saúde */}
+                      <div className="bg-gray-50 p-4 rounded-xl">
+                        <h3 className="text-lg font-semibold text-dark-primary mb-4">
+                          Filtros de Estabelecimentos
+                        </h3>
+                        <HealthLayerSelector
+                          filtros={filtrosSaude}
+                          onFiltroChange={(novosFiltros) => {
+                            setFiltrosSaude(novosFiltros);
+                            buscarSaudeTempoReal(novosFiltros);
+                          }}
+                        />
+                      </div>
+
+                      {/* Mapa de Saúde */}
+                      {loadingService["saude"] && (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="spinner w-8 h-8"></div>
+                          <span className="ml-3 text-gray-600">Buscando estabelecimentos...</span>
+                        </div>
+                      )}
+
+                      <MapView
+                        center={[addressData.coordinates.lat, addressData.coordinates.lng]}
+                        userLocation={[addressData.coordinates.lat, addressData.coordinates.lng]}
+                        userAddress={getEnderecoCompleto()}
+                        trechoCoordinates={null}
+                        className="w-full h-[600px]"
+                        isFeira={false}
+                        feiras={[]}
+                        selectedFeiraId={undefined}
+                        isSaude={true}
+                        estabelecimentosSaude={saudeResults}
+                      />
+
+                      {!loadingService["saude"] && saudeResults.length === 0 && (
+                        <div className="text-center py-8">
+                          <div className="text-6xl mb-4">🏥</div>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            Nenhum estabelecimento encontrado
+                          </h3>
+                          <p className="text-gray-600">
+                            Tente ajustar os filtros para ver mais resultados.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </TabPanel>
+            </Card>
           </div>
         )}
       </div>
@@ -349,23 +646,23 @@ function BuscarPageContent() {
 
 export default function BuscarPage() {
   return (
-    <Suspense fallback={
-      <Layout>
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-4 text-center">
-              Buscar Serviços Públicos
-            </h1>
-            <p className="text-white/90 text-center text-lg">
-              Carregando...
-            </p>
+    <Suspense
+      fallback={
+        <Layout>
+          <div className="container mx-auto px-4 py-8 max-w-7xl">
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-white mb-4 text-center">
+                Buscar Serviços Públicos
+              </h1>
+              <p className="text-white/90 text-center text-lg">Carregando...</p>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="spinner w-8 h-8"></div>
+            </div>
           </div>
-          <div className="flex items-center justify-center h-64">
-            <div className="spinner w-8 h-8"></div>
-          </div>
-        </div>
-      </Layout>
-    }>
+        </Layout>
+      }
+    >
       <BuscarPageContent />
     </Suspense>
   );

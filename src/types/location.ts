@@ -16,8 +16,8 @@ export interface Address {
 export interface ViaCepResponse {
   cep: string;
   logradouro: string;
-  complemento: string;
-  unidade: string;
+  complemento?: string;
+  unidade?: string;
   bairro: string;
   localidade: string;
   uf: string;

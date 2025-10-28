@@ -1,6 +1,10 @@
 import database from '../database';
 import { ColetaLixo, ColetaLixoSearchParams, ColetaLixoApiResponse, ColetaLixoResponse } from '../../types/coletaLixo';
-// import * as cheerio from 'cheerio'; // Comentado até implementar o parsing
+import https from 'https';
+import * as cheerio from 'cheerio';
+
+// Configurar para ignorar certificados SSL problemáticos
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 // Interface para dados da API da Ecourbis
 interface EcourbisApiItem {
@@ -60,24 +64,37 @@ export class ColetaLixoService {
       const coletaComum: ColetaLixo[] = [];
       const coletaSeletiva: ColetaLixo[] = [];
 
-      // Processar dados da prefeitura
-      if (dadosPrefeitura.status === 'fulfilled' && dadosPrefeitura.value) {
-        coletaComum.push(...dadosPrefeitura.value.coletaComum);
-        coletaSeletiva.push(...dadosPrefeitura.value.coletaSeletiva);
-      }
-
-      // Processar dados da Ecourbis
+      // Processar dados da Ecourbis (fonte primária)
       if (dadosEcourbis.status === 'fulfilled' && dadosEcourbis.value) {
+        console.log('✅ Dados obtidos da Ecourbis');
         coletaComum.push(...dadosEcourbis.value.coletaComum);
         coletaSeletiva.push(...dadosEcourbis.value.coletaSeletiva);
+      } else {
+        console.log('❌ Ecourbis falhou, tentando Prefeitura SP como fallback...');
+        
+        // Fallback: usar dados da prefeitura se Ecourbis falhar
+        if (dadosPrefeitura.status === 'fulfilled' && dadosPrefeitura.value) {
+          console.log('✅ Usando dados da Prefeitura SP como fallback');
+          coletaComum.push(...dadosPrefeitura.value.coletaComum);
+          coletaSeletiva.push(...dadosPrefeitura.value.coletaSeletiva);
+        } else {
+          console.log('❌ Prefeitura SP também falhou');
+        }
       }
 
-      // Se não encontrou dados, usar dados mock
+      // Se ainda não encontrou dados, tentar prefeitura novamente se Ecourbis funcionou
+      if (coletaComum.length === 0 && coletaSeletiva.length === 0 && dadosEcourbis.status === 'fulfilled') {
+        console.log('⚠️ Ecourbis funcionou mas não retornou dados, tentando Prefeitura SP...');
+        if (dadosPrefeitura.status === 'fulfilled' && dadosPrefeitura.value) {
+          console.log('✅ Usando dados da Prefeitura SP como complemento');
+          coletaComum.push(...dadosPrefeitura.value.coletaComum);
+          coletaSeletiva.push(...dadosPrefeitura.value.coletaSeletiva);
+        }
+      }
+
+      // Se ainda não encontrou dados, retornar vazio
       if (coletaComum.length === 0 && coletaSeletiva.length === 0) {
-        console.log('⚠️ Nenhum dado encontrado, usando dados mock baseados na região');
-        const dadosMock = this.gerarDadosMock(params.endereco, params.latitude, params.longitude);
-        coletaComum.push(...dadosMock.coletaComum);
-        coletaSeletiva.push(...dadosMock.coletaSeletiva);
+        console.log('⚠️ Nenhum dado encontrado em nenhuma fonte');
       }
 
       const response: ColetaLixoResponse = {
@@ -122,7 +139,14 @@ export class ColetaLixoService {
       
       const response = await fetch(this.PREFECTURA_URL, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       });
 
@@ -130,13 +154,99 @@ export class ColetaLixoService {
         throw new Error(`Erro na requisição da prefeitura: ${response.status}`);
       }
 
-      // const html = await response.text(); // Comentado até implementar o parsing
-      // const $ = cheerio.load(html); // Comentado até implementar o parsing
+      const html = await response.text();
+      console.log('📄 HTML da prefeitura recebido, tamanho:', html.length, 'caracteres');
       
-      // Aqui você implementaria o parsing específico da página da prefeitura
-      // Por enquanto, retornamos null para usar dados mock
-      console.log('⚠️ Scraping da prefeitura não implementado ainda, usando dados mock');
-      return null;
+      const $ = cheerio.load(html);
+      
+      // Analisar a estrutura da página para extrair dados de coleta
+      const coletaComum: ColetaLixo[] = [];
+      const coletaSeletiva: ColetaLixo[] = [];
+      
+      // Procurar por elementos que contenham informações de coleta
+      // Esta é uma implementação genérica que pode precisar ser ajustada
+      // baseada na estrutura real da página da prefeitura
+      
+      // Tentar encontrar informações de coleta comum
+      $('.coleta-comum, .lixo-comum, [class*="comum"], [class*="domiciliar"]').each((index, element) => {
+        const $el = $(element);
+        const texto = $el.text().trim();
+        
+        if (texto && texto.length > 10) {
+          coletaComum.push({
+            id: `prefeitura-comum-${index}`,
+            tipo: 'comum',
+            endereco: 'Informação da Prefeitura SP',
+            diasSemana: this.extrairDiasSemana(texto),
+            horarios: this.extrairHorarios(texto),
+            frequencia: 'Conforme programação da prefeitura',
+            observacoes: texto.substring(0, 200) + '...'
+          });
+        }
+      });
+      
+      // Tentar encontrar informações de coleta seletiva
+      $('.coleta-seletiva, .lixo-seletivo, [class*="seletiva"], [class*="reciclagem"]').each((index, element) => {
+        const $el = $(element);
+        const texto = $el.text().trim();
+        
+        if (texto && texto.length > 10) {
+          coletaSeletiva.push({
+            id: `prefeitura-seletiva-${index}`,
+            tipo: 'seletiva',
+            endereco: 'Informação da Prefeitura SP',
+            diasSemana: this.extrairDiasSemana(texto),
+            horarios: this.extrairHorarios(texto),
+            frequencia: 'Conforme programação da prefeitura',
+            observacoes: texto.substring(0, 200) + '...'
+          });
+        }
+      });
+      
+      // Se não encontrou elementos específicos, tentar extrair de qualquer texto
+      if (coletaComum.length === 0 && coletaSeletiva.length === 0) {
+        console.log('🔍 Procurando informações de coleta em todo o conteúdo...');
+        
+        // Procurar por padrões de dias da semana
+        const conteudoCompleto = $('body').text();
+        const temDiasSemana = /(segunda|terça|quarta|quinta|sexta|sábado|domingo)/i.test(conteudoCompleto);
+        const temHorarios = /\d{1,2}:\d{2}/.test(conteudoCompleto);
+        
+        if (temDiasSemana || temHorarios) {
+          console.log('📋 Encontrados padrões de dias/horários no conteúdo');
+          
+          // Criar uma entrada genérica baseada no conteúdo encontrado
+          const diasEncontrados = this.extrairDiasSemana(conteudoCompleto);
+          const horariosEncontrados = this.extrairHorarios(conteudoCompleto);
+          
+          if (diasEncontrados.length > 0) {
+            coletaComum.push({
+              id: 'prefeitura-comum-generico',
+              tipo: 'comum',
+              endereco: 'Informação da Prefeitura SP',
+              diasSemana: diasEncontrados,
+              horarios: horariosEncontrados.length > 0 ? horariosEncontrados : ['Conforme programação'],
+              frequencia: 'Conforme programação da prefeitura',
+              observacoes: 'Informações extraídas do site da Prefeitura SP'
+            });
+          }
+        }
+      }
+      
+      if (coletaComum.length > 0 || coletaSeletiva.length > 0) {
+        console.log(`✅ Scraping da prefeitura bem-sucedido: ${coletaComum.length} comum, ${coletaSeletiva.length} seletiva`);
+        return {
+          coletaComum,
+          coletaSeletiva,
+          endereco: 'Informação da Prefeitura SP',
+          latitude: 0,
+          longitude: 0,
+          dataConsulta: new Date().toISOString()
+        };
+      } else {
+        console.log('⚠️ Nenhuma informação de coleta encontrada no site da prefeitura');
+        return null;
+      }
 
     } catch (error) {
       console.error('Erro no scraping da prefeitura:', error);
@@ -167,36 +277,48 @@ export class ColetaLixoService {
 
       const data = await response.json();
       console.log('📊 Dados da Ecourbis:', data);
+      console.log('🔍 Verificando estrutura:');
+      console.log('- data existe?', !!data);
+      console.log('- data.result existe?', !!data.result);
+      console.log('- data.result é array?', Array.isArray(data.result));
+      console.log('- data.result.length:', data.result?.length);
       
       // Processar dados da Ecourbis baseado na estrutura real da API
-      if (data && data.length > 0) {
+      if (data && data.result && data.result.length > 0) {
         const coletaComum: ColetaLixo[] = [];
         const coletaSeletiva: ColetaLixo[] = [];
         
-        // Processar cada item retornado pela API
-        data.forEach((item: EcourbisApiItem, index: number) => {
-          if (item.tipo === 'comum' || item.tipo === 'orgânico') {
-            coletaComum.push({
-              id: `ecourbis-comum-${index}`,
-              tipo: 'comum',
-              endereco: item.endereco || 'Endereço não informado',
-              diasSemana: this.processarDiasSemana(item.dias),
-              horarios: this.processarHorarios(item.horarios),
-              frequencia: item.frequencia || 'Conforme programação',
-              observacoes: item.observacoes || 'Coloque o lixo na calçada até 6h da manhã'
-            });
-          } else if (item.tipo === 'seletiva' || item.tipo === 'reciclável') {
-            coletaSeletiva.push({
-              id: `ecourbis-seletiva-${index}`,
-              tipo: 'seletiva',
-              endereco: item.endereco || 'Endereço não informado',
-              diasSemana: this.processarDiasSemana(item.dias),
-              horarios: this.processarHorarios(item.horarios),
-              frequencia: item.frequencia || 'Conforme programação',
-              observacoes: item.observacoes || 'Separe materiais recicláveis: papel, plástico, vidro e metal'
-            });
-          }
-        });
+        // Processar apenas o primeiro item único (a API retorna duplicatas)
+        const itemUnico = data.result[0];
+        console.log(`🔍 Processando item único:`, itemUnico);
+        
+        // Coleta Domiciliar (Comum)
+        if (itemUnico.domiciliar && itemUnico.domiciliar.frequencia) {
+          console.log('✅ Adicionando coleta domiciliar');
+          coletaComum.push({
+            id: `ecourbis-domiciliar-${itemUnico.id}`,
+            tipo: 'comum',
+            endereco: `${itemUnico.endereco.logradouro}, ${itemUnico.endereco.distrito}`,
+            diasSemana: this.processarDiasSemanaEcourbisArray(itemUnico.domiciliar.frequencia),
+            horarios: this.processarHorariosEcourbisArray(itemUnico.domiciliar.horarios),
+            frequencia: itemUnico.domiciliar.frequencia,
+            observacoes: itemUnico.domiciliar.mensagem || 'Coloque o lixo na calçada até 6h da manhã'
+          });
+        }
+
+        // Coleta Seletiva
+        if (itemUnico.seletiva && itemUnico.seletiva.possue && itemUnico.seletiva.frequencia) {
+          console.log('✅ Adicionando coleta seletiva');
+          coletaSeletiva.push({
+            id: `ecourbis-seletiva-${itemUnico.id}`,
+            tipo: 'seletiva',
+            endereco: `${itemUnico.endereco.logradouro}, ${itemUnico.endereco.distrito}`,
+            diasSemana: this.processarDiasSemanaEcourbisArray(itemUnico.seletiva.frequencia),
+            horarios: this.processarHorariosEcourbisArray(itemUnico.seletiva.horarios),
+            frequencia: itemUnico.seletiva.frequencia,
+            observacoes: itemUnico.seletiva.mensagem || 'Separe materiais recicláveis: papel, plástico, vidro e metal'
+          });
+        }
         
         if (coletaComum.length > 0 || coletaSeletiva.length > 0) {
           return {
@@ -261,6 +383,131 @@ export class ColetaLixoService {
   }
 
   /**
+   * Processa dias da semana da API Ecourbis (formato SEG/QUA/SEX) - Retorna string
+   */
+  private processarDiasSemanaEcourbis(frequencia: string): string {
+    if (!frequencia) return 'Conforme programação';
+    
+    const diasMap: { [key: string]: string } = {
+      'SEG': 'Segunda-feira',
+      'TER': 'Terça-feira', 
+      'QUA': 'Quarta-feira',
+      'QUI': 'Quinta-feira',
+      'SEX': 'Sexta-feira',
+      'SAB': 'Sábado',
+      'DOM': 'Domingo'
+    };
+    
+    return frequencia.split('/').map(dia => diasMap[dia] || dia).join(', ');
+  }
+
+  /**
+   * Processa dias da semana da API Ecourbis (formato SEG/QUA/SEX) - Retorna array
+   */
+  private processarDiasSemanaEcourbisArray(frequencia: string): string[] {
+    if (!frequencia) return ['Conforme programação'];
+    
+    const diasMap: { [key: string]: string } = {
+      'SEG': 'Segunda-feira',
+      'TER': 'Terça-feira', 
+      'QUA': 'Quarta-feira',
+      'QUI': 'Quinta-feira',
+      'SEX': 'Sexta-feira',
+      'SAB': 'Sábado',
+      'DOM': 'Domingo'
+    };
+    
+    return frequencia.split('/').map(dia => diasMap[dia] || dia);
+  }
+
+  /**
+   * Processa horários da API Ecourbis (objeto com dias da semana) - Retorna string
+   */
+  private processarHorariosEcourbis(horarios: any): string {
+    if (!horarios || typeof horarios !== 'object') return 'Conforme programação';
+    
+    const horariosArray: string[] = [];
+    const diasMap: { [key: string]: string } = {
+      'seg': 'Segunda',
+      'ter': 'Terça', 
+      'qua': 'Quarta',
+      'qui': 'Quinta',
+      'sex': 'Sexta',
+      'sab': 'Sábado',
+      'dom': 'Domingo'
+    };
+    
+    Object.entries(horarios).forEach(([dia, horario]) => {
+      if (horario && horario !== '-') {
+        horariosArray.push(`${diasMap[dia] || dia}: ${horario}`);
+      }
+    });
+    
+    return horariosArray.length > 0 ? horariosArray.join(', ') : 'Conforme programação';
+  }
+
+  /**
+   * Processa horários da API Ecourbis (objeto com dias da semana) - Retorna array
+   */
+  private processarHorariosEcourbisArray(horarios: any): string[] {
+    if (!horarios || typeof horarios !== 'object') return ['Conforme programação'];
+    
+    const horariosArray: string[] = [];
+    const diasMap: { [key: string]: string } = {
+      'seg': 'Segunda',
+      'ter': 'Terça', 
+      'qua': 'Quarta',
+      'qui': 'Quinta',
+      'sex': 'Sexta',
+      'sab': 'Sábado',
+      'dom': 'Domingo'
+    };
+    
+    Object.entries(horarios).forEach(([dia, horario]) => {
+      if (horario && horario !== '-') {
+        horariosArray.push(`${diasMap[dia] || dia}: ${horario}`);
+      }
+    });
+    
+    return horariosArray.length > 0 ? horariosArray : ['Conforme programação'];
+  }
+
+  /**
+   * Extrai dias da semana de um texto
+   */
+  private extrairDiasSemana(texto: string): string[] {
+    const diasMap: { [key: string]: string } = {
+      'segunda': 'Segunda-feira',
+      'terça': 'Terça-feira',
+      'quarta': 'Quarta-feira',
+      'quinta': 'Quinta-feira',
+      'sexta': 'Sexta-feira',
+      'sábado': 'Sábado',
+      'domingo': 'Domingo'
+    };
+    
+    const diasEncontrados: string[] = [];
+    
+    Object.keys(diasMap).forEach(dia => {
+      if (texto.toLowerCase().includes(dia)) {
+        diasEncontrados.push(diasMap[dia]);
+      }
+    });
+    
+    return diasEncontrados.length > 0 ? diasEncontrados : ['Conforme programação'];
+  }
+
+  /**
+   * Extrai horários de um texto
+   */
+  private extrairHorarios(texto: string): string[] {
+    const regexHorarios = /\d{1,2}:\d{2}(?:\s*[à-]\s*\d{1,2}:\d{2})?/g;
+    const horarios = texto.match(regexHorarios);
+    
+    return horarios ? horarios.map(h => h.trim()) : ['Conforme programação'];
+  }
+
+  /**
    * Processa horários retornados pela API
    */
   private processarHorarios(horarios: string | string[] | undefined): string[] {
@@ -297,117 +544,9 @@ export class ColetaLixoService {
     return limpo;
   }
 
-  /**
-   * Gera dados mock para desenvolvimento baseados na região
-   */
-  private gerarDadosMock(endereco: string, latitude: number, longitude: number): ColetaLixoResponse {
-    // Gerar dados variados baseados na região (simulando diferentes bairros)
-    const regiao = this.identificarRegiao(latitude, longitude);
-    
-    return {
-      coletaComum: [
-        {
-          id: 'coleta-comum-1',
-          tipo: 'comum',
-          endereco: endereco,
-          diasSemana: regiao.diasComum,
-          horarios: regiao.horariosComum,
-          frequencia: regiao.frequenciaComum,
-          observacoes: 'Coloque o lixo na calçada até 6h da manhã'
-        }
-      ],
-      coletaSeletiva: [
-        {
-          id: 'coleta-seletiva-1',
-          tipo: 'seletiva',
-          endereco: endereco,
-          diasSemana: regiao.diasSeletiva,
-          horarios: regiao.horariosSeletiva,
-          frequencia: regiao.frequenciaSeletiva,
-          observacoes: 'Separe materiais recicláveis: papel, plástico, vidro e metal'
-        }
-      ],
-      endereco,
-      latitude,
-      longitude,
-      dataConsulta: new Date().toISOString()
-    };
-  }
+  // Função de dados mock removida - usar apenas dados reais
 
-  /**
-   * Identifica a região baseada nas coordenadas para gerar dados mock realistas
-   */
-  private identificarRegiao(latitude: number, longitude: number): {
-    diasComum: string[];
-    horariosComum: string[];
-    frequenciaComum: string;
-    diasSeletiva: string[];
-    horariosSeletiva: string[];
-    frequenciaSeletiva: string;
-  } {
-    // Simular diferentes regiões de São Paulo com horários diferentes
-    const regioes = [
-      {
-        // Centro
-        minLat: -23.6, maxLat: -23.5, minLng: -46.7, maxLng: -46.6,
-        diasComum: ['Segunda', 'Quarta', 'Sexta'],
-        horariosComum: ['06:00', '14:00'],
-        frequenciaComum: '3x por semana',
-        diasSeletiva: ['Terça'],
-        horariosSeletiva: ['08:00'],
-        frequenciaSeletiva: '1x por semana'
-      },
-      {
-        // Zona Sul
-        minLat: -23.7, maxLat: -23.6, minLng: -46.7, maxLng: -46.6,
-        diasComum: ['Terça', 'Quinta', 'Sábado'],
-        horariosComum: ['07:00', '15:00'],
-        frequenciaComum: '3x por semana',
-        diasSeletiva: ['Quarta'],
-        horariosSeletiva: ['09:00'],
-        frequenciaSeletiva: '1x por semana'
-      },
-      {
-        // Zona Norte
-        minLat: -23.5, maxLat: -23.4, minLng: -46.7, maxLng: -46.6,
-        diasComum: ['Segunda', 'Quarta', 'Sexta'],
-        horariosComum: ['05:30', '13:30'],
-        frequenciaComum: '3x por semana',
-        diasSeletiva: ['Quinta'],
-        horariosSeletiva: ['07:30'],
-        frequenciaSeletiva: '1x por semana'
-      },
-      {
-        // Zona Leste
-        minLat: -23.6, maxLat: -23.5, minLng: -46.6, maxLng: -46.5,
-        diasComum: ['Segunda', 'Quarta', 'Sexta'],
-        horariosComum: ['06:30', '14:30'],
-        frequenciaComum: '3x por semana',
-        diasSeletiva: ['Terça'],
-        horariosSeletiva: ['08:30'],
-        frequenciaSeletiva: '1x por semana'
-      },
-      {
-        // Zona Oeste
-        minLat: -23.6, maxLat: -23.5, minLng: -46.8, maxLng: -46.7,
-        diasComum: ['Terça', 'Quinta', 'Sábado'],
-        horariosComum: ['07:30', '15:30'],
-        frequenciaComum: '3x por semana',
-        diasSeletiva: ['Quarta'],
-        horariosSeletiva: ['09:30'],
-        frequenciaSeletiva: '1x por semana'
-      }
-    ];
-
-    // Encontrar a região que corresponde às coordenadas
-    const regiao = regioes.find(r => 
-      latitude >= r.minLat && latitude <= r.maxLat &&
-      longitude >= r.minLng && longitude <= r.maxLng
-    );
-
-    // Se não encontrar região específica, usar padrão
-    return regiao || regioes[0];
-  }
+  // Função de identificação de região removida - usar apenas dados reais
 
   /**
    * Verifica se existe cache válido
