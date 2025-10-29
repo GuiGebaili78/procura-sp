@@ -11,35 +11,4 @@ services:
       - /app/node_modules
     environment:
       NODE_ENV: development
-      POSTGRES_HOST: procura-sp-db
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: procura_sp_user
-      POSTGRES_DB: procura_sp_db
-      POSTGRES_PASSWORD: procura_sp_password
-    depends_on:
-      procura-sp-db:
-        condition: service_healthy
-    command: npm run dev:only
-
-  procura-sp-db:
-    image: postgres:17.4-alpine3.21
-    container_name: procura-sp-db
-    environment:
-      POSTGRES_USER: procura_sp_user
-      POSTGRES_DB: procura_sp_db
-      POSTGRES_PASSWORD: procura_sp_password
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5434:5432"
-    volumes:
-      - pgdata_procura-sp:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U procura_sp_user -d procura_sp_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    command:
-      ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
-
-volumes:
-  pgdata_procura-sp:
+    command: npm run dev
