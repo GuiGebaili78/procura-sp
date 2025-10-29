@@ -88,33 +88,12 @@ function MapController({
     console.log("🗺️ [MapController] - estabelecimentosSaude.length:", estabelecimentosSaude.length);
     
     if (isSaude) {
-      // Para saúde, sempre centralizar no usuário
+      // Para saúde, SEMPRE centralizar no usuário com zoom fixo
+      // Não ajustar baseado nos estabelecimentos para manter o foco no usuário
       if (userLocation) {
-        console.log("🗺️ [MapController] Centralizando no usuário para saúde:", userLocation);
-        
-        if (estabelecimentosSaude.length > 0) {
-          // Há estabelecimentos: ajustar zoom baseado na distância
-          const distancias = estabelecimentosSaude
-            .filter(est => est.latitude && est.longitude)
-            .map(est => map.distance(userLocation, [est.latitude!, est.longitude!]));
-          
-          const maxDistancia = Math.max(...distancias, 0);
-          
-          // Determinar zoom baseado na distância máxima
-          let zoom = 15; // Padrão
-          if (maxDistancia > 3000) zoom = 13; // > 3km
-          else if (maxDistancia > 2000) zoom = 14; // > 2km
-          else if (maxDistancia > 1000) zoom = 14.5; // > 1km
-          
-          console.log(`🗺️ [MapController] Distância máxima: ${maxDistancia}m, Zoom: ${zoom}`);
-          
-          // Centralizar no usuário com zoom calculado
-          map.setView(userLocation, zoom, { animate: true });
-        } else {
-          // Sem estabelecimentos: apenas centralizar no usuário
-          console.log("🗺️ [MapController] Sem estabelecimentos, centralizando no usuário");
-          map.setView(userLocation, 15, { animate: true });
-        }
+        console.log("🗺️ [MapController] Centralizando no usuário para saúde (zoom fixo 15):", userLocation);
+        // Zoom fixo em 15 para manter sempre o mesmo nível e o usuário no centro
+        map.setView(userLocation, 15, { animate: true });
       } else {
         // Fallback: se não há userLocation, usar bounds dos estabelecimentos
         const bounds = new LatLngBounds([]);

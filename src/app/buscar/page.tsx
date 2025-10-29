@@ -20,6 +20,8 @@ import { searchCataBagulho } from "../../services/api";
 import {
   FeirasSkeletonLoading,
   CataBagulhoSkeletonLoading,
+  ColetaLixoSkeletonLoading,
+  SaudeSkeletonLoading,
 } from "../../components/ui/SkeletonLoading";
 
 // Dynamic import do mapa para evitar problemas de SSR
@@ -112,6 +114,23 @@ function BuscarPageContent() {
     setError("");
     // Carregar dados do serviço ativo
     loadServiceData(activeTab, { cep, numero, endereco, coordinates });
+    
+    // Scroll suave para o card "Endereço Selecionado" após um pequeno delay
+    // Mostra desde o início do card, incluindo toda a tarja azul
+    setTimeout(() => {
+      const enderecoCard = document.getElementById('endereco-selecionado-card');
+      if (enderecoCard) {
+        // Pegar a posição do card e subtrair 80px para dar bastante espaço acima
+        // Isso garante que o início completo do card fique visível
+        const elementPosition = enderecoCard.getBoundingClientRect().top + window.pageYOffset;
+        const offsetPosition = elementPosition - 80;
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 500);
   };
 
   const loadServiceData = async (
@@ -238,6 +257,14 @@ function BuscarPageContent() {
         setSelectedFeiraId(undefined);
         setError("");
       }
+      
+      // Scroll suave para o mapa após visualizar trecho
+      setTimeout(() => {
+        const mapaSection = document.getElementById('mapa-section');
+        if (mapaSection) {
+          mapaSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao carregar trecho";
       setError(`Erro ao carregar trecho: ${message}`);
@@ -253,6 +280,9 @@ function BuscarPageContent() {
     setTrechoCoordinates(null);
     setSelectedFeiraId(undefined);
     setError("");
+    
+    // Não fazer scroll ao trocar de aba - deixar o usuário navegar livremente
+    // O scroll só acontece na busca inicial (handleAddressFound)
   };
 
   // Buscar estabelecimentos de saúde em tempo real quando filtros mudarem
@@ -324,7 +354,7 @@ function BuscarPageContent() {
 
         {/* Abas de Serviços - Aparece após buscar o endereço */}
         {addressData && (
-          <div className="mt-8">
+          <div id="endereco-selecionado-card" className="mt-8">
             <Card padding="none" className="overflow-hidden">
               {/* Cabeçalho com endereço */}
               <div className="p-6 bg-gradient-to-r from-primary to-secondary">
@@ -345,7 +375,7 @@ function BuscarPageContent() {
                   {/* Aba Cata-Bagulho */}
                   {activeTab === "cata-bagulho" && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
+                      <div id="cata-bagulho-section">
                         {loadingService["cata-bagulho"] && (
                           <div className="mb-4">
                             <h3 className="text-xl font-bold text-dark-primary mb-4">
@@ -413,7 +443,7 @@ function BuscarPageContent() {
                   {/* Aba Feiras Livres */}
                   {activeTab === "feiras-livres" && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
+                      <div id="feiras-section">
                         {loadingService["feiras-livres"] && (
                           <div className="mb-4">
                             <h3 className="text-xl font-bold text-dark-primary mb-4">
@@ -473,15 +503,10 @@ function BuscarPageContent() {
                   {/* Aba Coleta de Lixo */}
                   {activeTab === "coleta-lixo" && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
+                      <div id="coleta-section">
                         {loadingService["coleta-lixo"] && (
                           <div className="mb-4">
-                            <h3 className="text-xl font-bold text-dark-primary mb-4">
-                              Buscando informações de coleta...
-                            </h3>
-                            <div className="flex items-center justify-center py-8">
-                              <div className="spinner w-8 h-8"></div>
-                            </div>
+                            <ColetaLixoSkeletonLoading />
                           </div>
                         )}
 
@@ -536,7 +561,7 @@ function BuscarPageContent() {
                   {activeTab === "saude" && (
                     <div className="space-y-6">
                       {/* Filtros de Saúde */}
-                      <div className="bg-gray-50 p-4 rounded-xl">
+                      <div id="saude-filtros-section" className="bg-gray-50 p-4 rounded-xl">
                         <h3 className="text-lg font-semibold text-dark-primary mb-4">
                           Filtros de Estabelecimentos
                         </h3>
@@ -551,9 +576,8 @@ function BuscarPageContent() {
 
                       {/* Mapa de Saúde */}
                       {loadingService["saude"] && (
-                        <div className="flex items-center justify-center py-8">
-                          <div className="spinner w-8 h-8"></div>
-                          <span className="ml-3 text-gray-600">Buscando estabelecimentos...</span>
+                        <div className="mb-4">
+                          <SaudeSkeletonLoading />
                         </div>
                       )}
 
