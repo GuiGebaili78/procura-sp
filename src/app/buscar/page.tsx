@@ -110,8 +110,18 @@ function BuscarPageContent() {
     endereco: { logradouro: string; bairro: string; localidade: string; uf: string },
     coordinates: { lat: number; lng: number }
   ) => {
-    setAddressData({ cep, numero, endereco, coordinates });
+    // Limpar TODOS os dados anteriores quando buscar novo endereço
+    setCataBagulhoResults([]);
+    setFeirasResults([]);
+    setColetaLixoResults(undefined);
+    setSaudeResults([]);
+    setTrechoCoordinates(null);
+    setSelectedFeiraId(undefined);
     setError("");
+    
+    // Atualizar endereço
+    setAddressData({ cep, numero, endereco, coordinates });
+    
     // Carregar dados do serviço ativo
     loadServiceData(activeTab, { cep, numero, endereco, coordinates });
     
@@ -145,15 +155,9 @@ function BuscarPageContent() {
     const currentData = data || addressData;
     if (!currentData) return;
 
-    // Verificar se já carregou este serviço
-    if (
-      (serviceType === "cata-bagulho" && cataBagulhoResults.length > 0) ||
-      (serviceType === "feiras-livres" && feirasResults.length > 0) ||
-      (serviceType === "coleta-lixo" && coletaLixoResults) ||
-      (serviceType === "saude" && saudeResults.length > 0)
-    ) {
-      return; // Já tem dados carregados
-    }
+    // Não verificar mais se já tem dados carregados
+    // Isso permite recarregar quando trocar de endereço
+    console.log(`🔄 [BuscarPage] Carregando dados para ${serviceType}...`);
 
     setLoadingService({ ...loadingService, [serviceType]: true });
     setError("");
