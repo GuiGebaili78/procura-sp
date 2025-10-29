@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ColetaLixoSearchParams, ColetaLixo, ColetaLixoResponse } from '../../../types/coletaLixo';
-import * as cheerio from 'cheerio';
 
 // Configurar para ignorar certificados SSL problemáticos
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -12,7 +11,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endereco, numero, latitude, longitude } = body as ColetaLixoSearchParams;
+    const { endereco, latitude, longitude } = body as ColetaLixoSearchParams;
 
     // Validação básica
     if (!endereco || !latitude || !longitude) {

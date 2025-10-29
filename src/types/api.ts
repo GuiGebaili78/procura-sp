@@ -1,6 +1,4 @@
-// Removido: Interfaces do Nominatim (não usado mais)
-// export interface NominatimAddress { ... }
-// export interface NominatimResult { ... }
+// Tipos para as APIs do sistema Procura SP
 
 export interface ServiceMeta {
   query?: string;
@@ -13,7 +11,7 @@ export interface ServiceMeta {
 }
 
 export interface BackendServiceSearchResponse {
-  services: unknown[]; // Usando unknown ao invés de any
+  services: unknown[];
   total?: number;
   meta?: ServiceMeta;
 }
