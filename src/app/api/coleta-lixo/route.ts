@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ColetaLixoSearchParams, ColetaLixo, ColetaLixoResponse } from '../../../types/coletaLixo';
-
-// Configurar para ignorar certificados SSL problemáticos
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+import axios from 'axios';
+import https from 'https';
 
 /**
  * API Route para buscar informações de Coleta de Lixo
- * Usa web scraping da API Ecourbis
+ * Usa a API oficial da Ecourbis
  */
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const body = await request.json();
     const { endereco, latitude, longitude } = body as ColetaLixoSearchParams;
 
     // Validação básica
     if (!endereco || !latitude || !longitude) {
+      console.error('❌ [ColetaLixo] Validação falhou:', { endereco, latitude, longitude });
       return NextResponse.json(
         { 
           success: false, 
@@ -24,12 +26,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🗑️ [ColetaLixo] Iniciando busca:', { endereco, latitude, longitude });
+    const isProduction = process.env.NODE_ENV === 'production';
+    console.log('🗑️ [ColetaLixo] Iniciando busca:', { 
+      endereco, 
+      latitude, 
+      longitude,
+      isProduction,
+      vercel: process.env.VERCEL ? 'SIM' : 'NÃO'
+    });
 
     // Buscar dados da Ecourbis
     const dados = await buscarDadosEcourbis(latitude, longitude);
 
     if (!dados) {
+      const elapsed = Date.now() - startTime;
+      console.warn('⚠️ [ColetaLixo] Nenhum dado encontrado', { elapsed });
       return NextResponse.json(
         { 
           success: false, 
@@ -48,9 +59,11 @@ export async function POST(request: NextRequest) {
       dataConsulta: new Date().toISOString()
     };
 
+    const elapsed = Date.now() - startTime;
     console.log(`✅ [ColetaLixo] Busca concluída:`, {
       coletaComum: response.coletaComum.length,
-      coletaSeletiva: response.coletaSeletiva.length
+      coletaSeletiva: response.coletaSeletiva.length,
+      elapsed
     });
 
     return NextResponse.json({
@@ -59,11 +72,18 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [ColetaLixo] Erro:', error);
+    const elapsed = Date.now() - startTime;
+    console.error('❌ [ColetaLixo] Erro fatal:', {
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      name: error instanceof Error ? error.name : undefined,
+      stack: error instanceof Error ? error.stack : undefined,
+      elapsed
+    });
+    
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Erro interno do servidor' 
+        error: error instanceof Error ? error.message : 'Erro ao buscar informações de coleta' 
       },
       { status: 500 }
     );
@@ -81,42 +101,69 @@ export async function GET() {
 }
 
 /**
- * Busca dados da API Ecourbis
+ * Busca dados do site da Ecourbis via scraping
  */
 async function buscarDadosEcourbis(
   latitude: number, 
   longitude: number
 ): Promise<{ coletaComum: ColetaLixo[], coletaSeletiva: ColetaLixo[] } | null> {
   try {
-    console.log('🔍 [Ecourbis] Buscando dados...');
+    console.log('🔍 [Ecourbis] Iniciando busca...', { latitude, longitude });
     
-    const url = `https://apicoleta.ecourbis.com.br/coleta?dst=100&lat=${latitude}&lng=${longitude}`;
-    console.log('🌐 [Ecourbis] URL:', url);
+    // Buscar dados da API Ecourbis
+    // URL correta: https://apicoleta.ecourbis.com.br/coleta?lat=LAT&lng=LNG&dst=100
+    const apiUrl = `https://apicoleta.ecourbis.com.br/coleta?lat=${latitude}&lng=${longitude}&dst=100`;
+    console.log('🌐 [Ecourbis] URL:', apiUrl);
     
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+    // Criar agente HTTPS que ignora verificação de certificado (apenas em dev)
+    const httpsAgent = new https.Agent({
+      rejectUnauthorized: false // Ignora erro de certificado SSL
     });
 
-    if (!response.ok) {
-      throw new Error(`Erro na requisição: ${response.status}`);
-    }
+    const apiResponse = await axios.get(apiUrl, {
+      timeout: 30000, // 30 segundos
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+        'Referer': 'https://www.ecourbis.com.br/',
+        'Origin': 'https://www.ecourbis.com.br'
+      },
+      httpsAgent: httpsAgent, // Usa o agente customizado
+      validateStatus: (status) => status < 500 // Aceita qualquer status < 500
+    });
 
-    const data = await response.json();
-    console.log('📊 [Ecourbis] Dados recebidos:', data);
+    console.log('📊 [Ecourbis] Resposta recebida:', {
+      status: apiResponse.status,
+      statusText: apiResponse.statusText,
+      hasData: !!apiResponse.data,
+      hasResult: !!apiResponse.data?.result,
+      resultLength: apiResponse.data?.result?.length || 0
+    });
+
+    // Verificar status HTTP
+    if (apiResponse.status !== 200) {
+      console.error('❌ [Ecourbis] Status HTTP não OK:', {
+        status: apiResponse.status,
+        statusText: apiResponse.statusText,
+        data: apiResponse.data
+      });
+      return null;
+    }
     
-    if (!data || !data.result || data.result.length === 0) {
-      console.log('⚠️ [Ecourbis] Nenhum dado encontrado');
+    if (!apiResponse.data || !apiResponse.data.result || apiResponse.data.result.length === 0) {
+      console.warn('⚠️ [Ecourbis] Nenhum resultado na resposta');
       return null;
     }
 
     const coletaComum: ColetaLixo[] = [];
     const coletaSeletiva: ColetaLixo[] = [];
     
-    // Processar apenas o primeiro item (a API retorna duplicatas)
-    const item = data.result[0];
-    console.log('🔍 [Ecourbis] Processando item:', item);
+    const item = apiResponse.data.result[0];
+    console.log('✅ [Ecourbis API] Dados encontrados:', {
+      endereco: item.endereco?.logradouro,
+      distrito: item.endereco?.distrito
+    });
     
     // Coleta Domiciliar (Comum)
     if (item.domiciliar && item.domiciliar.frequencia) {
@@ -147,7 +194,7 @@ async function buscarDadosEcourbis(
     }
     
     if (coletaComum.length > 0 || coletaSeletiva.length > 0) {
-      console.log(`✅ [Ecourbis] ${coletaComum.length} comum, ${coletaSeletiva.length} seletiva`);
+      console.log(`✅ [Ecourbis] Sucesso! ${coletaComum.length} comum, ${coletaSeletiva.length} seletiva`);
       return { coletaComum, coletaSeletiva };
     }
     
@@ -155,7 +202,10 @@ async function buscarDadosEcourbis(
     return null;
 
   } catch (error) {
-    console.error('❌ [Ecourbis] Erro:', error);
+    console.error('❌ [Ecourbis] Erro:', {
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return null;
   }
 }

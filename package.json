@@ -12,9 +12,8 @@
     "lint:check": "prettier --check .",
     "lint:fix": "prettier --write .",
     "generate:structure": "npx ts-node scripts/gerar_estrutura.ts",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:restart": "docker-compose down && docker-compose up -d"
+    "docker:restart": "docker-compose down && docker-compose up -d --build",
+    "docker:reset": "docker-compose down -v --rmi all && docker-compose up -d --build --force-recreate"
   },
   "dependencies": {
     "axios": "^1.11.0",
