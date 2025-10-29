@@ -27,7 +27,12 @@ export function HealthLayerSelector({
 
   const handleSelectNone = () => {
     const todosInativos = Object.keys(filtros).reduce((acc, key) => {
-      acc[key as keyof FiltroSaude] = false;
+      // Manter os filtros de esfera administrativa sempre ativos
+      if (key === 'municipal' || key === 'estadual' || key === 'privado') {
+        acc[key as keyof FiltroSaude] = true;
+      } else {
+        acc[key as keyof FiltroSaude] = false;
+      }
       return acc;
     }, {} as FiltroSaude);
     onFiltroChange(todosInativos);
@@ -260,10 +265,16 @@ export function HealthLayerSelector({
           </div>
         </div>
 
-        {filtrosAtivos === 0 && (
+        {/* Avisar quando nenhum tipo está selecionado */}
+        {Object.entries(filtros)
+          .filter(([key]) => key !== 'municipal' && key !== 'estadual' && key !== 'privado')
+          .every(([, value]) => !value) && (
           <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              ⚠️ Selecione pelo menos um tipo de estabelecimento para buscar.
+            <p className="text-sm text-yellow-800 font-medium mb-1">
+              ⚠️ Nenhum tipo de estabelecimento selecionado
+            </p>
+            <p className="text-xs text-yellow-700">
+              Selecione pelo menos um tipo acima para visualizar os marcadores no mapa.
             </p>
           </div>
         )}
@@ -280,8 +291,16 @@ export function HealthLayerSelector({
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={filtros.municipal}
-              onChange={(e) => handleFiltroChange("municipal", e.target.checked)}
+              checked={filtros.municipal && filtros.estadual}
+              onChange={(e) => {
+                // Quando marcado/desmarcado, altera ambos municipal e estadual
+                const novosFiltros = {
+                  ...filtros,
+                  municipal: e.target.checked,
+                  estadual: e.target.checked
+                };
+                onFiltroChange(novosFiltros);
+              }}
               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
             />
             <span className="text-sm font-medium text-gray-700">

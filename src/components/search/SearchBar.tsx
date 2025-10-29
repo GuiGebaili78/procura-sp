@@ -6,14 +6,13 @@ import { Button } from "../ui/Button";
 import { Loading } from "../ui/Loading";
 import { Card } from "../ui/Card";
 import { fetchCep } from "../../services/viacep";
-import { geocodeAddress } from "../../services/nominatim";
+// Removido: import { geocodeAddress } from "../../services/nominatim";
 import { searchCataBagulho } from "../../services/api";
 import { formatCep } from "../../utils/validators";
 import { CataBagulhoResult } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
-import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
-import { FiltroSaude } from "../../types/saude";
+import { EstabelecimentoSaude, FiltroSaude } from "../../types/saude";
 import { HealthLayerSelector } from "../health/HealthLayerSelector";
 
 interface SearchBarProps {
@@ -234,17 +233,13 @@ export function SearchBar({ selectedService, onSearchResults, onError, onSearchS
       let coordinates: { lat: number; lng: number } | null = null;
       
       try {
-        console.log("🔍 Tentando geocoding para:", enderecoCompleto);
-        const geocodeResults = await geocodeAddress(enderecoCompleto);
-        if (geocodeResults && geocodeResults.length > 0) {
-          coordinates = {
-            lat: parseFloat(geocodeResults[0].lat),
-            lng: parseFloat(geocodeResults[0].lon)
-          };
-          console.log("✅ Coordenadas reais obtidas via geocoding:", coordinates);
+        console.log("🔍 Usando coordenadas aproximadas por CEP para:", enderecoCompleto);
+        coordinates = obterCoordenadasAproximadasPorCEP(cep) || null;
+        if (coordinates) {
+          console.log("✅ Coordenadas aproximadas obtidas:", coordinates);
         } else {
-          console.log("⚠️ Geocoding retornou resultado vazio, usando coordenadas aproximadas por CEP");
-          coordinates = obterCoordenadasAproximadasPorCEP(cep) || null;
+          console.log("⚠️ Não foi possível obter coordenadas, usando centro de SP");
+          coordinates = { lat: -23.5505, lng: -46.6333 };
         }
       } catch (error) {
         console.error("❌ Erro no geocoding:", error);

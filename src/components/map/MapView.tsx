@@ -87,38 +87,36 @@ function MapController({
     console.log("🗺️ [MapController] - isSaude:", isSaude);
     console.log("🗺️ [MapController] - estabelecimentosSaude.length:", estabelecimentosSaude.length);
     
-    if (isSaude && estabelecimentosSaude.length > 0) {
-      // Para saúde, centralizar no usuário primeiro para facilitar navegação
+    if (isSaude) {
+      // Para saúde, sempre centralizar no usuário
       if (userLocation) {
         console.log("🗺️ [MapController] Centralizando no usuário para saúde:", userLocation);
-        // Centralizar no usuário com zoom adequado para ver estabelecimentos próximos
-        map.setView(userLocation, 15);
         
-        // Opcionalmente, ajustar bounds para incluir estabelecimentos próximos
-        // mas mantendo o foco no usuário
-        setTimeout(() => {
-          const bounds = new LatLngBounds([]);
-          bounds.extend(userLocation);
+        if (estabelecimentosSaude.length > 0) {
+          // Há estabelecimentos: ajustar zoom baseado na distância
+          const distancias = estabelecimentosSaude
+            .filter(est => est.latitude && est.longitude)
+            .map(est => map.distance(userLocation, [est.latitude!, est.longitude!]));
           
-          // Adicionar apenas estabelecimentos próximos (dentro de 2km)
-          estabelecimentosSaude.forEach(estabelecimento => {
-            if (estabelecimento.latitude && estabelecimento.longitude) {
-              // Calcular distância do usuário
-              const distancia = map.distance(userLocation, [estabelecimento.latitude, estabelecimento.longitude]);
-              if (distancia <= 2000) { // 2km
-                bounds.extend([estabelecimento.latitude, estabelecimento.longitude]);
-              }
-            }
-          });
+          const maxDistancia = Math.max(...distancias, 0);
           
-          // Se há estabelecimentos próximos, ajustar bounds suavemente
-          if (bounds.isValid() && bounds.getNorthEast() !== bounds.getSouthWest()) {
-            console.log("🗺️ [MapController] Ajustando bounds para estabelecimentos próximos");
-            map.fitBounds(bounds, { padding: [30, 30] });
-          }
-        }, 500); // Delay para suavizar a transição
+          // Determinar zoom baseado na distância máxima
+          let zoom = 15; // Padrão
+          if (maxDistancia > 3000) zoom = 13; // > 3km
+          else if (maxDistancia > 2000) zoom = 14; // > 2km
+          else if (maxDistancia > 1000) zoom = 14.5; // > 1km
+          
+          console.log(`🗺️ [MapController] Distância máxima: ${maxDistancia}m, Zoom: ${zoom}`);
+          
+          // Centralizar no usuário com zoom calculado
+          map.setView(userLocation, zoom, { animate: true });
+        } else {
+          // Sem estabelecimentos: apenas centralizar no usuário
+          console.log("🗺️ [MapController] Sem estabelecimentos, centralizando no usuário");
+          map.setView(userLocation, 15, { animate: true });
+        }
       } else {
-        // Fallback: se não há userLocation, usar bounds normal
+        // Fallback: se não há userLocation, usar bounds dos estabelecimentos
         const bounds = new LatLngBounds([]);
         estabelecimentosSaude.forEach(estabelecimento => {
           if (estabelecimento.latitude && estabelecimento.longitude) {
@@ -128,7 +126,7 @@ function MapController({
         
         if (bounds.isValid()) {
           console.log("🗺️ [MapController] Ajustando bounds para saúde (sem userLocation)");
-          map.fitBounds(bounds, { padding: [20, 20] });
+          map.fitBounds(bounds, { padding: [50, 50] });
         }
       }
     } else if (isFeira && feiras.length > 0) {
@@ -315,6 +313,9 @@ export function MapView({
 
           {/* Marcadores dos estabelecimentos de saúde com agrupamento por coordenadas */}
           {isSaude && (() => {
+            console.log('🏥 [MapView] Renderizando marcadores de saúde');
+            console.log('🏥 [MapView] Total de estabelecimentos:', estabelecimentosSaude.length);
+            
             // Agrupar estabelecimentos por coordenadas
             const grupos: Record<string, EstabelecimentoSaude[]> = {};
             
@@ -327,6 +328,8 @@ export function MapView({
                 grupos[key].push(estabelecimento);
               }
             });
+
+            console.log('🏥 [MapView] Total de grupos de marcadores:', Object.keys(grupos).length);
 
             // Renderizar marcadores agrupados
             return Object.entries(grupos).map(([coords, estabelecimentos]) => {

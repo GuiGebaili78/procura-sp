@@ -14,6 +14,7 @@ import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
 import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
 import { FiltroSaude } from "../../types/saude";
+import { FILTROS_PADRAO } from "../../utils/saude-categorias";
 import { fetchTrechoCoordinates } from "../../services/trechoService";
 import { searchCataBagulho } from "../../services/api";
 import {
@@ -82,63 +83,8 @@ function BuscarPageContent() {
   const [loadingTrecho, setLoadingTrecho] = useState(false);
   const [selectedFeiraId, setSelectedFeiraId] = useState<string | undefined>(undefined);
 
-  // Filtros de saúde
-  const [filtrosSaude, setFiltrosSaude] = useState<FiltroSaude>({
-    ubs: true,
-    hospitais: true,
-    postos: false,
-    farmacias: false,
-    maternidades: false,
-    urgencia: false,
-    academias: false,
-    caps: false,
-    saudeBucal: false,
-    doencasRaras: false,
-    ama: false,
-    programas: false,
-    diagnostico: false,
-    ambulatorio: false,
-    supervisao: false,
-    residencia: false,
-    reabilitacao: false,
-    apoio: false,
-    clinica: false,
-    dst: false,
-    prontoSocorro: false,
-    testagem: false,
-    auditiva: false,
-    horaCerta: false,
-    idoso: false,
-    laboratorio: false,
-    trabalhador: false,
-    apoioDiagnostico: false,
-    apoioTerapeutico: false,
-    instituto: false,
-    apae: false,
-    referencia: false,
-    imagem: false,
-    nutricao: false,
-    reabilitacaoGeral: false,
-    nefrologia: false,
-    odontologica: false,
-    saudeMental: false,
-    referenciaGeral: false,
-    medicinas: false,
-    hemocentro: false,
-    zoonoses: false,
-    laboratorioZoo: false,
-    casaParto: false,
-    sexual: false,
-    dstUad: false,
-    capsInfantil: false,
-    ambulatorios: false,
-    programasGerais: false,
-    tradicionais: false,
-    dependente: false,
-    municipal: true,
-    estadual: true,
-    privado: true
-  });
+  // Filtros de saúde (padrão: UBS e Hospitais com todas as esferas)
+  const [filtrosSaude, setFiltrosSaude] = useState<FiltroSaude>(FILTROS_PADRAO);
 
   // Verificar parâmetros da URL para pré-selecionar serviço
   useEffect(() => {
@@ -245,21 +191,23 @@ function BuscarPageContent() {
 
         case "saude":
           console.log('🔍 [BuscarPage] Buscando estabelecimentos de saúde...');
+          console.log('🔧 [BuscarPage] Filtros:', filtrosSaude);
           const saudeResponse = await fetch('/api/saude', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              lat: coordinates.lat,
-              lng: coordinates.lng,
-              raio: 5 // 5km (a API espera em KM, não metros)
+              latitude: coordinates.lat,
+              longitude: coordinates.lng,
+              filtros: filtrosSaude,
+              raio: 5000 // 5km em metros (a API converte para km)
             })
           });
           const saudeData = await saudeResponse.json();
           console.log('📊 [BuscarPage] Resposta saúde:', saudeData);
           
-          // A API retorna { success, data: { estabelecimentos, total, ... } }
-          if (saudeData.success && saudeData.data) {
-            const estabelecimentos = saudeData.data.estabelecimentos || [];
+          // A API retorna { success, estabelecimentos }
+          if (saudeData.success && saudeData.estabelecimentos) {
+            const estabelecimentos = saudeData.estabelecimentos || [];
             console.log(`✅ [BuscarPage] ${estabelecimentos.length} estabelecimentos encontrados`);
             setSaudeResults(estabelecimentos);
           } else {
@@ -318,15 +266,16 @@ function BuscarPageContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lat: addressData.coordinates.lat,
-          lng: addressData.coordinates.lng,
-          raio: 5 // 5km (a API espera em KM, não metros)
+          latitude: addressData.coordinates.lat,
+          longitude: addressData.coordinates.lng,
+          filtros: novosFiltros,
+          raio: 5000 // 5km em metros (a API converte para km)
         })
       });
       const saudeData = await saudeResponse.json();
       
-      if (saudeData.success && saudeData.data) {
-        const estabelecimentos = saudeData.data.estabelecimentos || [];
+      if (saudeData.success && saudeData.estabelecimentos) {
+        const estabelecimentos = saudeData.estabelecimentos || [];
         console.log(`✅ [BuscarPage] ${estabelecimentos.length} estabelecimentos após filtro`);
         setSaudeResults(estabelecimentos);
       } else {
