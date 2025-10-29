@@ -107,31 +107,45 @@ async function buscarDadosEcourbis(
   latitude: number, 
   longitude: number
 ): Promise<{ coletaComum: ColetaLixo[], coletaSeletiva: ColetaLixo[] } | null> {
-  try {
-    console.log('🔍 [Ecourbis] Iniciando busca...', { latitude, longitude });
-    
-    // Buscar dados da API Ecourbis
-    // URL correta: https://apicoleta.ecourbis.com.br/coleta?lat=LAT&lng=LNG&dst=100
-    const apiUrl = `https://apicoleta.ecourbis.com.br/coleta?lat=${latitude}&lng=${longitude}&dst=100`;
-    console.log('🌐 [Ecourbis] URL:', apiUrl);
-    
-    // Criar agente HTTPS que ignora verificação de certificado (apenas em dev)
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false // Ignora erro de certificado SSL
-    });
+  const maxRetries = 3;
+  const baseTimeout = 20000; // 20 segundos base
+  
+  for (let tentativa = 1; tentativa <= maxRetries; tentativa++) {
+    try {
+      console.log(`🔍 [Ecourbis] Tentativa ${tentativa}/${maxRetries}...`, { latitude, longitude });
+      
+      // Buscar dados da API Ecourbis
+      // URL correta: https://apicoleta.ecourbis.com.br/coleta?lat=LAT&lng=LNG&dst=100
+      const apiUrl = `https://apicoleta.ecourbis.com.br/coleta?lat=${latitude}&lng=${longitude}&dst=100`;
+      console.log('🌐 [Ecourbis] URL:', apiUrl);
+      
+      // Criar agente HTTPS que ignora verificação de certificado (apenas em dev)
+      const httpsAgent = new https.Agent({
+        rejectUnauthorized: false, // Ignora erro de certificado SSL
+        keepAlive: true,
+        keepAliveMsecs: 1000,
+        timeout: baseTimeout * tentativa // Aumenta timeout a cada tentativa
+      });
 
-    const apiResponse = await axios.get(apiUrl, {
-      timeout: 30000, // 30 segundos
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'pt-BR,pt;q=0.9',
-        'Referer': 'https://www.ecourbis.com.br/',
-        'Origin': 'https://www.ecourbis.com.br'
-      },
-      httpsAgent: httpsAgent, // Usa o agente customizado
-      validateStatus: (status) => status < 500 // Aceita qualquer status < 500
-    });
+      // Timeout aumenta a cada tentativa: 20s, 40s, 60s
+      const timeout = baseTimeout * tentativa;
+      console.log(`⏱️ [Ecourbis] Timeout configurado: ${timeout}ms`);
+
+      const apiResponse = await axios.get(apiUrl, {
+        timeout: timeout,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'pt-BR,pt;q=0.9',
+          'Referer': 'https://www.ecourbis.com.br/',
+          'Origin': 'https://www.ecourbis.com.br',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        },
+        httpsAgent: httpsAgent,
+        validateStatus: (status) => status < 500,
+        maxRedirects: 5
+      });
 
     console.log('📊 [Ecourbis] Resposta recebida:', {
       status: apiResponse.status,
@@ -193,21 +207,44 @@ async function buscarDadosEcourbis(
       });
     }
     
-    if (coletaComum.length > 0 || coletaSeletiva.length > 0) {
-      console.log(`✅ [Ecourbis] Sucesso! ${coletaComum.length} comum, ${coletaSeletiva.length} seletiva`);
-      return { coletaComum, coletaSeletiva };
-    }
-    
-    console.log('⚠️ [Ecourbis] Nenhum dado válido encontrado');
-    return null;
+      if (coletaComum.length > 0 || coletaSeletiva.length > 0) {
+        console.log(`✅ [Ecourbis] Sucesso na tentativa ${tentativa}! ${coletaComum.length} comum, ${coletaSeletiva.length} seletiva`);
+        return { coletaComum, coletaSeletiva };
+      }
+      
+      console.log('⚠️ [Ecourbis] Nenhum dado válido encontrado');
+      return null;
 
-  } catch (error) {
-    console.error('❌ [Ecourbis] Erro:', {
-      message: error instanceof Error ? error.message : 'Erro desconhecido',
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    return null;
+    } catch (error) {
+      const isTimeout = axios.isAxiosError(error) && 
+                       (error.code === 'ECONNABORTED' || 
+                        error.code === 'ETIMEDOUT' || 
+                        error.message?.includes('timeout'));
+      
+      console.error(`❌ [Ecourbis] Erro na tentativa ${tentativa}/${maxRetries}:`, {
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        code: axios.isAxiosError(error) ? error.code : undefined,
+        isTimeout
+      });
+
+      // Se não for a última tentativa e for timeout, tentar novamente
+      if (tentativa < maxRetries && isTimeout) {
+        const waitTime = 2000 * tentativa; // Backoff: 2s, 4s
+        console.log(`⏳ [Ecourbis] Aguardando ${waitTime}ms antes da próxima tentativa...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue; // Tenta novamente
+      }
+      
+      // Se for a última tentativa ou não for timeout, retorna null
+      if (tentativa === maxRetries) {
+        console.error('❌ [Ecourbis] Todas as tentativas falharam');
+      }
+      
+      return null;
+    }
   }
+  
+  return null;
 }
 
 /**
