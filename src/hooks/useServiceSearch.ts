@@ -4,6 +4,7 @@ import { CataBagulhoResult } from '../types/cataBagulho';
 import { FeiraLivre } from '../types/feiraLivre';
 import { ColetaLixoResponse } from '../types/coletaLixo';
 import { EstabelecimentoSaude } from '../lib/services/saudeLocal.service';
+import { buscarColetaEcourbis } from '../services/ecourbis';
 
 interface Coordinates {
   lat: number;
@@ -77,26 +78,35 @@ export function useServiceSearch(): UseServiceSearchReturn {
   }, []);
 
   const searchColetaLixo = useCallback(async (params: SearchParams): Promise<ColetaLixoResponse> => {
-    const response = await fetch('/api/coleta-lixo', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        endereco: params.enderecoCompleto,
-        numero: params.numero,
-        latitude: params.coordinates.lat,
-        longitude: params.coordinates.lng
-      })
-    });
+    console.log('🔍 [ServiceSearch] Buscando coleta de lixo (client-side)...');
+    console.log('📍 [ServiceSearch] Coordenadas:', params.coordinates);
+    
+    // Buscar direto do navegador do usuário (não passa pelo servidor)
+    // Isso funciona porque o usuário tem IP brasileiro
+    const resultado = await buscarColetaEcourbis(
+      params.coordinates.lat,
+      params.coordinates.lng
+    );
 
-    const data = await response.json();
-
-    if (!data.success || !data.data) {
+    if (!resultado) {
       throw new Error("Nenhuma informação de coleta de lixo encontrada para este endereço.");
     }
 
-    return data.data;
+    const response: ColetaLixoResponse = {
+      coletaComum: resultado.coletaComum,
+      coletaSeletiva: resultado.coletaSeletiva,
+      endereco: params.enderecoCompleto,
+      latitude: params.coordinates.lat,
+      longitude: params.coordinates.lng,
+      dataConsulta: new Date().toISOString()
+    };
+
+    console.log('✅ [ServiceSearch] Coleta encontrada:', {
+      coletaComum: response.coletaComum.length,
+      coletaSeletiva: response.coletaSeletiva.length
+    });
+
+    return response;
   }, []);
 
   const searchSaude = useCallback(async (params: SearchParams): Promise<EstabelecimentoSaude[]> => {
