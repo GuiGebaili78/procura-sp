@@ -17,6 +17,7 @@ import { FiltroSaude } from "../../types/saude";
 import { FILTROS_PADRAO } from "../../utils/saude-categorias";
 import { fetchTrechoCoordinates } from "../../services/trechoService";
 import { searchCataBagulho } from "../../services/api";
+import { useServiceSearch } from "../../hooks/useServiceSearch";
 import {
   FeirasSkeletonLoading,
   CataBagulhoSkeletonLoading,
@@ -87,6 +88,9 @@ function BuscarPageContent() {
 
   // Filtros de saúde (padrão: UBS e Hospitais com todas as esferas)
   const [filtrosSaude, setFiltrosSaude] = useState<FiltroSaude>(FILTROS_PADRAO);
+
+  // Hook para buscar serviços
+  const { searchColetaLixo } = useServiceSearch();
 
   // Verificar parâmetros da URL para pré-selecionar serviço
   useEffect(() => {
@@ -198,18 +202,20 @@ function BuscarPageContent() {
           break;
 
         case "coleta-lixo":
-          const coletaResponse = await fetch('/api/coleta-lixo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              endereco: enderecoCompleto,
+          console.log('🔍 [BuscarPage] Buscando coleta de lixo...');
+          try {
+            const coletaData = await searchColetaLixo({
+              cep: currentData.cep,
               numero,
-              latitude: coordinates.lat,
-              longitude: coordinates.lng
-            })
-          });
-          const coletaData = await coletaResponse.json();
-          setColetaLixoResults(coletaData.success ? coletaData.data : undefined);
+              coordinates,
+              enderecoCompleto
+            });
+            setColetaLixoResults(coletaData);
+            console.log('✅ [BuscarPage] Coleta encontrada');
+          } catch (error) {
+            console.error('❌ [BuscarPage] Erro ao buscar coleta:', error);
+            setColetaLixoResults(undefined);
+          }
           break;
 
         case "saude":

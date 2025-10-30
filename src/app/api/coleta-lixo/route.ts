@@ -35,6 +35,18 @@ export async function POST(request: NextRequest) {
       vercel: process.env.VERCEL ? 'SIM' : 'NÃO'
     });
 
+    // Bloqueio: na Vercel a Ecourbis bloqueia os IPs de saída → evitar chamadas do server
+    if (process.env.VERCEL) {
+      console.warn('⚠️ [ColetaLixo] Endpoint desativado na Vercel. Use a busca client-side (navegador) para consultar a Ecourbis.');
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Coleta via servidor desativada na Vercel por bloqueio de IP pela Ecourbis. A busca é feita diretamente do navegador do usuário.'
+        },
+        { status: 503 }
+      );
+    }
+
     // Buscar dados da Ecourbis
     const dados = await buscarDadosEcourbis(latitude, longitude);
 
