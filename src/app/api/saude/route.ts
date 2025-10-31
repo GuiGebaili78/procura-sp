@@ -161,8 +161,8 @@ export async function POST(request: NextRequest) {
     // Garantir que filtros existe e é um objeto válido
     const filtrosValidos = filtros && typeof filtros === 'object' ? filtros : {};
     
-    // Se houver filtros, converter para tipos
-    let tiposParaBuscar = categorias || [];
+    // Se houver filtros, converter para tipos (garantir que é array de strings)
+    let tiposParaBuscar: string[] = Array.isArray(categorias) ? categorias : [];
     
     if (filtrosValidos && Object.keys(filtrosValidos).length > 0) {
       // Se houver tipos diretos (do novo sistema de numeração), usar eles
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       console.log('[API:Saude] 📊 Total de estabelecimentos no JSON:', todosEstabelecimentos.length);
       
       // Filtrar por tipos (comparação case-insensitive, trim e normalizando espaços duplos)
-      const tiposParaBuscarNormalizados = tiposParaBuscar.map(t => 
+      const tiposParaBuscarNormalizados = tiposParaBuscar.map((t: string) => 
         t.toUpperCase().trim().replace(/\s+/g, ' ')
       );
       console.log('[API:Saude] 🔍 Tipos normalizados para buscar:', tiposParaBuscarNormalizados.length, 'tipos');
