@@ -30,7 +30,7 @@ export function HealthLayerSelector({
       estadual: filtros.estadual ?? true,
       privado: filtros.privado ?? true,
     };
-    (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
+    (novosFiltros as unknown as Record<string, unknown>).__tiposDiretos = tiposDiretos;
     onFiltroChange(novosFiltros);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -55,7 +55,7 @@ export function HealthLayerSelector({
       estadual: filtros.estadual ?? true,
       privado: filtros.privado ?? true,
     };
-    (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
+    (novosFiltros as unknown as Record<string, unknown>).__tiposDiretos = tiposDiretos;
     
     onFiltroChange(novosFiltros);
   };
@@ -70,7 +70,7 @@ export function HealthLayerSelector({
       estadual: filtros.estadual ?? true,
       privado: filtros.privado ?? true,
     };
-    (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
+    (novosFiltros as unknown as Record<string, unknown>).__tiposDiretos = tiposDiretos;
     onFiltroChange(novosFiltros);
   };
 
@@ -82,7 +82,7 @@ export function HealthLayerSelector({
       estadual: filtros.estadual ?? true,
       privado: filtros.privado ?? true,
     };
-    (novosFiltros as Record<string, unknown>).__tiposDiretos = [];
+    (novosFiltros as unknown as Record<string, unknown>).__tiposDiretos = [];
     onFiltroChange(novosFiltros);
   };
 

@@ -106,16 +106,16 @@ function BuscarPageContent() {
     if (addressData && !loadingService[activeTab]) {
       // Se a aba de saúde foi ativada e não há tipos diretos, inicializar
       if (activeTab === 'saude') {
-        const filtrosComTipos = filtrosSaude as Record<string, unknown> & { __tiposDiretos?: string[] };
+        const filtrosComTipos = filtrosSaude as unknown as Record<string, unknown> & { __tiposDiretos?: string[] };
         if (!filtrosComTipos.__tiposDiretos || filtrosComTipos.__tiposDiretos.length === 0) {
           // Inicializar com números principais selecionados
           const numerosIniciais = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
           const tiposDiretos = obterTiposPorNumeros(numerosIniciais);
-          const novosFiltros = { ...filtrosSaude };
-          (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
-          setFiltrosSaude(novosFiltros as FiltroSaude);
+          const novosFiltros = { ...filtrosSaude } as unknown as Record<string, unknown> & { __tiposDiretos?: string[] };
+          novosFiltros.__tiposDiretos = tiposDiretos;
+          setFiltrosSaude(novosFiltros as unknown as FiltroSaude);
           // Buscar com os novos filtros diretamente
-          buscarSaudeTempoReal(novosFiltros as FiltroSaude);
+          buscarSaudeTempoReal(novosFiltros as unknown as FiltroSaude);
           return;
         }
       }
@@ -144,13 +144,13 @@ function BuscarPageContent() {
     
     // Se a aba ativa for saúde, garantir que os filtros tenham tipos diretos
     if (activeTab === 'saude') {
-      const filtrosComTipos = filtrosSaude as Record<string, unknown> & { __tiposDiretos?: string[] };
+      const filtrosComTipos = filtrosSaude as unknown as Record<string, unknown> & { __tiposDiretos?: string[] };
       if (!filtrosComTipos.__tiposDiretos || filtrosComTipos.__tiposDiretos.length === 0) {
           const numerosIniciais = new Set([1, 2, 3, 4, 5, 6, 7, 8]);
         const tiposDiretos = obterTiposPorNumeros(numerosIniciais);
-        const novosFiltros = { ...filtrosSaude };
-        (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
-        setFiltrosSaude(novosFiltros as FiltroSaude);
+        const novosFiltros = { ...filtrosSaude } as unknown as Record<string, unknown> & { __tiposDiretos?: string[] };
+        novosFiltros.__tiposDiretos = tiposDiretos;
+        setFiltrosSaude(novosFiltros as unknown as FiltroSaude);
         // A busca será acionada pelo useEffect quando addressData mudar
       }
     }
@@ -258,7 +258,7 @@ function BuscarPageContent() {
           };
           console.log('📤 [BuscarPage] Enviando requisição para API:', {
             ...bodyRequest,
-            filtros_tiposDiretos: (filtrosSaude as Record<string, unknown>).__tiposDiretos
+            filtros_tiposDiretos: (filtrosSaude as unknown as Record<string, unknown> & { __tiposDiretos?: string[] }).__tiposDiretos
           });
           
           const saudeResponse = await fetch('/api/saude', {
@@ -342,7 +342,7 @@ function BuscarPageContent() {
       console.log('🔄 [BuscarPage] Aplicando filtros de saúde em tempo real...');
       console.log('📍 [BuscarPage] Coordenadas:', addressData.coordinates);
       console.log('🔧 [BuscarPage] Filtros:', novosFiltros);
-      const filtrosComTipos = novosFiltros as Record<string, unknown> & { __tiposDiretos?: string[] };
+      const filtrosComTipos = novosFiltros as unknown as Record<string, unknown> & { __tiposDiretos?: string[] };
       console.log('📋 [BuscarPage] Tipos diretos:', filtrosComTipos.__tiposDiretos);
       
       const requestBody = {
