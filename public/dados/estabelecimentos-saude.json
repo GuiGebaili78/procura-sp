@@ -2616,7 +2616,7 @@
     "bairro": "CAMPO LIMPO",
     "cep": "05788-230",
     "telefone": null,
-    "tipo": "CENTRO DE ATENCAO PSICOSSOCIAL INFANTIL",
+    "tipo": "CENTRO DE ATENCAO  PSICOSSOCIAL INFANTIL",
     "categoria": "Centro de Atenção Psicossocial Infantil",
     "administracao": "Municipal",
     "regiao": "Sul",
@@ -5269,6 +5269,7 @@
     "codigo": 32,
     "descricao": "É o estabelecimento de saúde destinado a prestar assistência médica em uma ou mais especialidades.",
     "latitude": -23.592355,
+    
     "longitude": -46.710763,
     "ativo": true,
     "dataAtualizacao": "2025-09-19T12:22:07.913Z"

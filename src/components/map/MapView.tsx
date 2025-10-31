@@ -16,6 +16,8 @@ import { TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
 import { HealthMarkerPopup } from "../health/HealthMarkerPopup";
+import { obterIconePorTipo } from "../../utils/saude-icones";
+import { obterTipoMaisFrequente, obterInfoPorTipo } from "../../utils/saude-tipos-unicos";
 
 // Ícones customizados
 const createCustomIcon = (color: string) =>
@@ -30,6 +32,45 @@ const createCustomIcon = (color: string) =>
     iconAnchor: [12, 41],
     popupAnchor: [1, -34],
   });
+
+// Função para codificar string Unicode para base64 de forma segura
+const encodeUnicodeToBase64 = (str: string): string => {
+  try {
+    // Primeiro, converter para UTF-8 bytes
+    const utf8Bytes = unescape(encodeURIComponent(str));
+    // Depois usar btoa nos bytes UTF-8
+    return btoa(utf8Bytes);
+  } catch {
+    // Fallback: usar encodeURIComponent e converter
+    return btoa(
+      encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => 
+        String.fromCharCode(parseInt(p1, 16))
+      )
+    );
+  }
+};
+
+// Criar ícone customizado com número para estabelecimentos de saúde
+const createSaudeIcon = (iconeInfo: { numero: number; tipo: string; cor: string; categoria: string; nomeFormatado: string }) => {
+  const numero = iconeInfo.numero.toString();
+  const fontSize = numero.length > 2 ? 10 : 14;
+  // Ajustar posição Y para centralizar melhor - usando dominante-baseline para melhor alinhamento
+  const textY = 18;
+  
+  const svgContent = `<svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+  <path fill="${iconeInfo.cor}" stroke="#fff" stroke-width="2" d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24C32 7.163 24.837 0 16 0z"/>
+  <text x="16" y="${textY}" font-size="${fontSize}" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-family="Arial, sans-serif">${numero}</text>
+</svg>`;
+  
+  const base64Svg = encodeUnicodeToBase64(svgContent);
+  
+  return new Icon({
+    iconUrl: `data:image/svg+xml;base64,${base64Svg}`,
+    iconSize: [32, 40],
+    iconAnchor: [16, 40],
+    popupAnchor: [0, -40],
+  });
+};
 
 const userLocationIcon = createCustomIcon("#00ADB5");
 const trechoIcon = createCustomIcon("#FF6B6B");
@@ -313,43 +354,18 @@ export function MapView({
             // Renderizar marcadores agrupados
             return Object.entries(grupos).map(([coords, estabelecimentos]) => {
               const [lat, lng] = coords.split(',').map(Number);
-              const isMultiple = estabelecimentos.length > 1;
               
-              // Função para obter cor baseada na categoria
-              const getCorPorCategoria = (categoria: string | null): string => {
-                if (!categoria) return "#6B7280"; // Cinza padrão
-                
-                const coresPorCategoria: Record<string, string> = {
-                  'Unidade Básica de Saúde': '#3B82F6', // Azul
-                  'Hospital Geral': '#EF4444', // Vermelho
-                  'Hospital': '#EF4444', // Vermelho
-                  'Hospital Especializado': '#EF4444', // Vermelho
-                  'Pronto Socorro Geral': '#F97316', // Laranja
-                  'Pronto Atendimento': '#F97316', // Laranja
-                  'AMA Especialidades': '#10B981', // Verde
-                  'Assistência Médica Ambulatorial': '#10B981', // Verde
-                  'Ambulatório de Especialidades': '#10B981', // Verde
-                  'Centro e Serviços de Diagnóstico por Imagem': '#8B5CF6', // Roxo
-                  'Centro/Clínica de Especialidades Odontológicas': '#06B6D4', // Ciano
-                  'Laboratório': '#EC4899', // Rosa
-                  'Centro de Atenção Psicossocial Adulto': '#6B7280', // Cinza
-                  'Centro de Atenção Psicossocial Infantil': '#6B7280', // Cinza
-                  'Centro de Atenção Psicossocial Álcool e Drogas': '#6B7280', // Cinza
-                  'Centro de Reabilitação': '#84CC16', // Verde lima
-                  'Núcleo Integrado de Reabilitação': '#84CC16', // Verde lima
-                };
-                
-                return coresPorCategoria[categoria] || '#6B7280';
-              };
-
-              // Usar a cor da primeira categoria ou uma cor padrão para múltiplos
-              const cor = isMultiple ? '#F59E0B' : getCorPorCategoria(estabelecimentos[0].categoria);
+              // Quando houver múltiplos estabelecimentos, usar o tipo mais frequente
+              const tipoMaisFrequente = obterTipoMaisFrequente(estabelecimentos);
+              const iconeInfo = obterInfoPorTipo(tipoMaisFrequente);
+              
+              const icon = createSaudeIcon(iconeInfo);
               
               return (
                 <Marker 
                   key={coords} 
                   position={[lat, lng]} 
-                  icon={createCustomIcon(cor)}
+                  icon={icon}
                 >
                   <Popup>
                     <HealthMarkerPopup estabelecimentos={estabelecimentos} />

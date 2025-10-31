@@ -269,6 +269,19 @@ export class SaudeLocalService {
   }
 
   /**
+   * Obtém todos os tipos únicos
+   */
+  getTodosTipos(): string[] {
+    const tiposSet = new Set<string>();
+    this.estabelecimentos.forEach(est => {
+      if (est.tipo) {
+        tiposSet.add(est.tipo);
+      }
+    });
+    return Array.from(tiposSet).sort();
+  }
+
+  /**
    * Obtém estatísticas dos dados
    */
   getEstatisticas(): {

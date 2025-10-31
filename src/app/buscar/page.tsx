@@ -9,6 +9,7 @@ import { Tabs, TabPanel, Tab } from "../../components/ui/Tabs";
 import { CepSearchSimple } from "../../components/search/CepSearchSimple";
 import { ServicesList } from "../../components/services/ServicesList";
 import { HealthLayerSelector } from "../../components/health/HealthLayerSelector";
+import { obterTiposPorNumeros } from "../../utils/saude-tipos-unicos";
 import { CataBagulhoResult, TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { ColetaLixoResponse } from "../../types/coletaLixo";
@@ -103,6 +104,21 @@ function BuscarPageContent() {
   // Carregar dados do serviço quando a aba mudar
   useEffect(() => {
     if (addressData && !loadingService[activeTab]) {
+      // Se a aba de saúde foi ativada e não há tipos diretos, inicializar
+      if (activeTab === 'saude') {
+        const filtrosComTipos = filtrosSaude as Record<string, unknown> & { __tiposDiretos?: string[] };
+        if (!filtrosComTipos.__tiposDiretos || filtrosComTipos.__tiposDiretos.length === 0) {
+          // Inicializar com números principais selecionados
+          const numerosIniciais = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+          const tiposDiretos = obterTiposPorNumeros(numerosIniciais);
+          const novosFiltros = { ...filtrosSaude };
+          (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
+          setFiltrosSaude(novosFiltros as FiltroSaude);
+          // Buscar com os novos filtros diretamente
+          buscarSaudeTempoReal(novosFiltros as FiltroSaude);
+          return;
+        }
+      }
       loadServiceData(activeTab);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,6 +141,19 @@ function BuscarPageContent() {
     
     // Atualizar endereço
     setAddressData({ cep, numero, endereco, coordinates });
+    
+    // Se a aba ativa for saúde, garantir que os filtros tenham tipos diretos
+    if (activeTab === 'saude') {
+      const filtrosComTipos = filtrosSaude as Record<string, unknown> & { __tiposDiretos?: string[] };
+      if (!filtrosComTipos.__tiposDiretos || filtrosComTipos.__tiposDiretos.length === 0) {
+          const numerosIniciais = new Set([1, 2, 3, 4, 5, 6, 7, 8]);
+        const tiposDiretos = obterTiposPorNumeros(numerosIniciais);
+        const novosFiltros = { ...filtrosSaude };
+        (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
+        setFiltrosSaude(novosFiltros as FiltroSaude);
+        // A busca será acionada pelo useEffect quando addressData mudar
+      }
+    }
     
     // Carregar dados do serviço ativo
     loadServiceData(activeTab, { cep, numero, endereco, coordinates });
@@ -221,15 +250,21 @@ function BuscarPageContent() {
         case "saude":
           console.log('🔍 [BuscarPage] Buscando estabelecimentos de saúde...');
           console.log('🔧 [BuscarPage] Filtros:', filtrosSaude);
+          const bodyRequest = {
+            latitude: coordinates.lat,
+            longitude: coordinates.lng,
+            filtros: filtrosSaude,
+            raio: 5000 // 5km em metros (a API converte para km)
+          };
+          console.log('📤 [BuscarPage] Enviando requisição para API:', {
+            ...bodyRequest,
+            filtros_tiposDiretos: (filtrosSaude as Record<string, unknown>).__tiposDiretos
+          });
+          
           const saudeResponse = await fetch('/api/saude', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              latitude: coordinates.lat,
-              longitude: coordinates.lng,
-              filtros: filtrosSaude,
-              raio: 5000 // 5km em metros (a API converte para km)
-            })
+            body: JSON.stringify(bodyRequest)
           });
           const saudeData = await saudeResponse.json();
           console.log('📊 [BuscarPage] Resposta saúde:', saudeData);
@@ -297,33 +332,56 @@ function BuscarPageContent() {
 
   // Buscar estabelecimentos de saúde em tempo real quando filtros mudarem
   const buscarSaudeTempoReal = async (novosFiltros: FiltroSaude) => {
-    if (!addressData) return;
+    if (!addressData) {
+      console.warn('⚠️ [BuscarPage] Sem endereço para buscar saúde');
+      return;
+    }
 
     setLoadingService({ ...loadingService, saude: true });
     try {
-      console.log('🔄 [BuscarPage] Aplicando filtros de saúde em tempo real...', novosFiltros);
+      console.log('🔄 [BuscarPage] Aplicando filtros de saúde em tempo real...');
+      console.log('📍 [BuscarPage] Coordenadas:', addressData.coordinates);
+      console.log('🔧 [BuscarPage] Filtros:', novosFiltros);
+      const filtrosComTipos = novosFiltros as Record<string, unknown> & { __tiposDiretos?: string[] };
+      console.log('📋 [BuscarPage] Tipos diretos:', filtrosComTipos.__tiposDiretos);
+      
+      const requestBody = {
+        latitude: addressData.coordinates.lat,
+        longitude: addressData.coordinates.lng,
+        filtros: novosFiltros,
+        raio: 5000 // 5km em metros
+      };
+      console.log('📤 [BuscarPage] Enviando requisição:', requestBody);
+      
       const saudeResponse = await fetch('/api/saude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          latitude: addressData.coordinates.lat,
-          longitude: addressData.coordinates.lng,
-          filtros: novosFiltros,
-          raio: 5000 // 5km em metros (a API converte para km)
-        })
+        body: JSON.stringify(requestBody)
       });
+      
+      if (!saudeResponse.ok) {
+        const errorText = await saudeResponse.text();
+        console.error('❌ [BuscarPage] Erro na resposta da API:', saudeResponse.status, errorText);
+        throw new Error(`Erro na API: ${saudeResponse.status} - ${errorText}`);
+      }
+      
       const saudeData = await saudeResponse.json();
+      console.log('📥 [BuscarPage] Resposta da API:', saudeData);
       
       if (saudeData.success && saudeData.estabelecimentos) {
         const estabelecimentos = saudeData.estabelecimentos || [];
-        console.log(`✅ [BuscarPage] ${estabelecimentos.length} estabelecimentos após filtro`);
+        console.log(`✅ [BuscarPage] ${estabelecimentos.length} estabelecimentos encontrados`);
         setSaudeResults(estabelecimentos);
       } else {
+        console.warn('⚠️ [BuscarPage] Nenhum estabelecimento encontrado ou erro na API');
         setSaudeResults([]);
       }
     } catch (error) {
       console.error("❌ [BuscarPage] Erro ao buscar estabelecimentos em tempo real:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error("❌ [BuscarPage] Detalhes do erro:", errorMessage);
       setSaudeResults([]);
+      setError(`Erro ao buscar estabelecimentos: ${errorMessage}`);
     } finally {
       setLoadingService({ ...loadingService, saude: false });
     }

@@ -1,16 +1,26 @@
+"use client";
+
+import { useState } from "react";
 import { EstabelecimentoSaude, TIPOS_ESTABELECIMENTO } from "../../types/saude";
+import { obterInfoPorTipo } from "../../utils/saude-tipos-unicos";
 
 interface HealthCardProps {
-  estabelecimento: EstabelecimentoSaude;
+  estabelecimento: EstabelecimentoSaude & { descricao?: string | null; tipo?: string };
   onSelect?: (estabelecimento: EstabelecimentoSaude) => void;
   className?: string;
 }
 
 export function HealthCard({ estabelecimento, onSelect, className = "" }: HealthCardProps) {
+  const [mostrarDescricao, setMostrarDescricao] = useState(false);
   
   // Determinar o tipo e cor do estabelecimento
   const getTipoInfo = () => {
-    // Mapear códigos para tipos conhecidos
+    // Se tem tipo direto, usar info por tipo
+    if (estabelecimento.tipo) {
+      return obterInfoPorTipo(estabelecimento.tipo);
+    }
+    
+    // Caso contrário, mapear códigos para tipos conhecidos
     const tipoMap: Record<string, keyof typeof TIPOS_ESTABELECIMENTO> = {
       "05": "UBS",
       "01": "HOSPITAL", 
@@ -29,6 +39,7 @@ export function HealthCard({ estabelecimento, onSelect, className = "" }: Health
   };
 
   const tipoInfo = getTipoInfo();
+  const temDescricao = estabelecimento.descricao && estabelecimento.descricao.trim().length > 0;
   
   // Formatar distância
   const formatarDistancia = (distancia?: number) => {
@@ -68,12 +79,12 @@ export function HealthCard({ estabelecimento, onSelect, className = "" }: Health
       {/* Header com tipo e distância */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3">
             <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
               style={{ backgroundColor: tipoInfo.cor }}
             >
-              {tipoInfo.icone}
+              {tipoInfo.numero}
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 text-sm leading-tight">
@@ -199,11 +210,106 @@ export function HealthCard({ estabelecimento, onSelect, className = "" }: Health
           <div className="text-xs text-gray-500">
             {estabelecimento.cnes && `CNES: ${estabelecimento.cnes}`}
           </div>
-          <div className="text-xs text-blue-600 font-medium">
-            Ver detalhes →
+          <div className="flex items-center gap-3">
+            {temDescricao && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMostrarDescricao(true);
+                }}
+                className="text-xs text-blue-600 font-medium hover:text-blue-800 transition-colors"
+              >
+                Saber mais →
+              </button>
+            )}
+            <div className="text-xs text-blue-600 font-medium">
+              Ver detalhes →
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de Descrição */}
+      {mostrarDescricao && temDescricao && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setMostrarDescricao(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header do Modal */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <span 
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  style={{ backgroundColor: tipoInfo.cor }}
+                >
+                  {tipoInfo.numero}
+                </span>
+                {estabelecimento.nome}
+              </h3>
+              <button
+                onClick={() => setMostrarDescricao(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="p-6">
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Tipo de Estabelecimento</h4>
+                <p className="text-sm text-gray-600">{tipoInfo.nome}</p>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Descrição</h4>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {estabelecimento.descricao}
+                </p>
+              </div>
+
+              {/* Informações adicionais */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Informações de Contato</h4>
+                <div className="space-y-2 text-sm text-gray-600">
+                  {estabelecimento.endereco && (
+                    <div className="flex items-start gap-2">
+                      <span>📍</span>
+                      <span>{estabelecimento.endereco}{estabelecimento.bairro ? `, ${estabelecimento.bairro}` : ''}</span>
+                    </div>
+                  )}
+                  {telefoneFormatado && (
+                    <div className="flex items-center gap-2">
+                      <span>📞</span>
+                      <span>{telefoneFormatado}</span>
+                    </div>
+                  )}
+                  {estabelecimento.regiao && (
+                    <div className="flex items-center gap-2">
+                      <span>🗺️</span>
+                      <span>Região: {estabelecimento.regiao}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer do Modal */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-4 flex justify-end">
+              <button
+                onClick={() => setMostrarDescricao(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,15 +1,28 @@
-import React from 'react';
+"use client";
+
+import React, { useState } from 'react';
 import { EstabelecimentoSaude } from '@/lib/services/saudeLocal.service';
+import { obterInfoPorTipo, obterTipoMaisFrequente } from '@/utils/saude-tipos-unicos';
 
 interface HealthMarkerPopupProps {
   estabelecimentos: EstabelecimentoSaude[];
 }
 
 export function HealthMarkerPopup({ estabelecimentos }: HealthMarkerPopupProps) {
+  const [mostrarDescricao, setMostrarDescricao] = useState(false);
+  
   if (estabelecimentos.length === 0) return null;
 
   // Pegar informações do primeiro estabelecimento (mesmo endereço)
   const primeiroEstabelecimento = estabelecimentos[0];
+  
+  // Obter ícone baseado no tipo mais frequente quando houver múltiplos
+  const tipoMaisFrequente = obterTipoMaisFrequente(estabelecimentos);
+  const iconeInfo = obterInfoPorTipo(tipoMaisFrequente);
+  
+  // Verificar se há descrição disponível
+  const temDescricao = primeiroEstabelecimento.descricao && 
+    primeiroEstabelecimento.descricao.trim().length > 0;
 
   // Função para formatar telefone
   const formatarTelefone = (telefone: number | null): string => {
@@ -41,40 +54,14 @@ export function HealthMarkerPopup({ estabelecimentos }: HealthMarkerPopupProps) 
     return partes.join(', ');
   };
 
-  // Função para obter sigla da categoria
-  const getSiglaCategoria = (categoria: string | null): string => {
-    if (!categoria) return 'SAÚDE';
-    
-    const siglasPorCategoria: Record<string, string> = {
-      'Unidade Básica de Saúde': 'UBS',
-      'Hospital Geral': 'HOSPITAL',
-      'Hospital': 'HOSPITAL',
-      'Hospital Especializado': 'HOSPITAL',
-      'Pronto Socorro Geral': 'PS',
-      'Pronto Atendimento': 'PA',
-      'AMA Especialidades': 'AMA',
-      'Assistência Médica Ambulatorial': 'AMA',
-      'Ambulatório de Especialidades': 'AMB',
-      'Centro e Serviços de Diagnóstico por Imagem': 'DIAG',
-      'Centro/Clínica de Especialidades Odontológicas': 'ODONTO',
-      'Laboratório': 'LAB',
-      'Centro de Atenção Psicossocial Adulto': 'CAPS',
-      'Centro de Atenção Psicossocial Infantil': 'CAPS',
-      'Centro de Atenção Psicossocial Álcool e Drogas': 'CAPS',
-      'Centro de Reabilitação': 'REAB',
-      'Núcleo Integrado de Reabilitação': 'REAB',
-    };
-    
-    return siglasPorCategoria[categoria] || 'SAÚDE';
-  };
-
   // Agrupar estabelecimentos por tipo
   const estabelecimentosPorTipo = estabelecimentos.reduce((acc, est) => {
-    const tipo = getSiglaCategoria(est.categoria);
-    if (!acc[tipo]) {
-      acc[tipo] = [];
+    const tipoInfo = obterInfoPorTipo(est.tipo);
+    const tipoDisplay = est.tipo; // Usar o nome exato do tipo
+    if (!acc[tipoDisplay]) {
+      acc[tipoDisplay] = [];
     }
-    acc[tipo].push(est);
+    acc[tipoDisplay].push(est);
     return acc;
   }, {} as Record<string, EstabelecimentoSaude[]>);
 
@@ -85,8 +72,14 @@ export function HealthMarkerPopup({ estabelecimentos }: HealthMarkerPopupProps) 
     <div className="max-w-[280px]">
       {/* Header compacto */}
       <div className="text-center mb-2">
-        <strong className="text-sm font-semibold text-gray-800">
-          🏥 {primeiroEstabelecimento.nome}
+        <strong className="text-sm font-semibold text-gray-800 flex items-center justify-center gap-2">
+          <span 
+            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+            style={{ backgroundColor: iconeInfo.cor }}
+          >
+            {iconeInfo.numero}
+          </span>
+          {primeiroEstabelecimento.nome}
         </strong>
       </div>
 
@@ -112,15 +105,26 @@ export function HealthMarkerPopup({ estabelecimentos }: HealthMarkerPopupProps) 
           🏥 Serviços no local:
         </div>
         <div className="flex flex-wrap gap-1">
-          {Object.entries(estabelecimentosPorTipo).map(([tipo, estabelecimentos]) => (
-            <span 
-              key={tipo} 
-              className="inline-block px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full font-medium"
-            >
-              {tipo}
-              {estabelecimentos.length > 1 && ` (${estabelecimentos.length})`}
-            </span>
-          ))}
+          {Object.entries(estabelecimentosPorTipo).map(([tipoDisplay, estabelecimentosTipo]) => {
+            const primeiroTipo = estabelecimentosTipo[0];
+            const iconeTipo = obterInfoPorTipo(primeiroTipo.tipo);
+            return (
+              <span 
+                key={tipoDisplay} 
+                className="inline-block px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full font-medium flex items-center gap-1"
+                style={{ borderColor: iconeTipo.cor }}
+              >
+                <span 
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  style={{ backgroundColor: iconeTipo.cor }}
+                >
+                  {iconeTipo.numero}
+                </span>
+                <span>{tipoDisplay}</span>
+                {estabelecimentosTipo.length > 1 && ` (${estabelecimentosTipo.length})`}
+              </span>
+            );
+          })}
         </div>
       </div>
 
@@ -132,11 +136,35 @@ export function HealthMarkerPopup({ estabelecimentos }: HealthMarkerPopupProps) 
 
       {/* Distância compacta */}
       {primeiroEstabelecimento.distancia && (
-        <div className="text-center pt-2 border-t border-gray-200">
+        <div className="text-center pt-2 border-t border-gray-200 mb-2">
           <div className="text-xs text-blue-600 font-medium">
             📍 {primeiroEstabelecimento.distancia < 1000 
               ? `${Math.round(primeiroEstabelecimento.distancia)}m` 
               : `${(primeiroEstabelecimento.distancia / 1000).toFixed(1)}km`}
+          </div>
+        </div>
+      )}
+
+      {/* Botão Saber Mais */}
+      {temDescricao && (
+        <div className="pt-2 border-t border-gray-200">
+          <button
+            onClick={() => setMostrarDescricao(!mostrarDescricao)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium rounded transition-colors"
+          >
+            <span>{mostrarDescricao ? '📖' : 'ℹ️'}</span>
+            <span>{mostrarDescricao ? 'Ocultar descrição' : 'Saber mais'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Descrição expandida */}
+      {mostrarDescricao && temDescricao && (
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <div className="bg-gray-50 p-2 rounded">
+            <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {primeiroEstabelecimento.descricao}
+            </p>
           </div>
         </div>
       )}

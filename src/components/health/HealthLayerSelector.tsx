@@ -1,4 +1,8 @@
-import { FiltroSaude, TIPOS_ESTABELECIMENTO } from "../../types/saude";
+"use client";
+
+import { useEffect, useState } from "react";
+import { FiltroSaude } from "../../types/saude";
+import { TIPOS_COM_NUMERO, obterTiposPorNumeros, obterInfoPorTipo } from "../../utils/saude-tipos-unicos";
 
 interface HealthLayerSelectorProps {
   filtros: FiltroSaude;
@@ -11,35 +15,104 @@ export function HealthLayerSelector({
   onFiltroChange,
   className = "",
 }: HealthLayerSelectorProps) {
-  
-  const handleFiltroChange = (tipo: keyof FiltroSaude, value: boolean) => {
-    const novosFiltros = { ...filtros, [tipo]: value };
+  const [tiposSelecionados, setTiposSelecionados] = useState<Set<number>>(new Set());
+  const carregando = false;
+
+  // Inicializar com tipos principais selecionados (1-13)
+  useEffect(() => {
+    const numerosIniciais = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    setTiposSelecionados(numerosIniciais);
+    const tiposDiretos = obterTiposPorNumeros(numerosIniciais);
+    const novosFiltros: FiltroSaude = {
+      ...filtros,
+      // Garantir que propriedades de esfera administrativa existam
+      municipal: filtros.municipal ?? true,
+      estadual: filtros.estadual ?? true,
+      privado: filtros.privado ?? true,
+    };
+    (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
+    onFiltroChange(novosFiltros);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleNumeroToggle = (numero: number) => {
+    const novosNumerosSelecionados = new Set(tiposSelecionados);
+    if (novosNumerosSelecionados.has(numero)) {
+      novosNumerosSelecionados.delete(numero);
+    } else {
+      novosNumerosSelecionados.add(numero);
+    }
+    setTiposSelecionados(novosNumerosSelecionados);
+    
+    // Obter tipos diretamente dos números selecionados
+    const tiposDiretos = obterTiposPorNumeros(novosNumerosSelecionados);
+    
+    // Criar novos filtros preservando propriedades existentes (especialmente esfera administrativa)
+    const novosFiltros: FiltroSaude = {
+      ...filtros,
+      // Garantir que propriedades de esfera administrativa existam
+      municipal: filtros.municipal ?? true,
+      estadual: filtros.estadual ?? true,
+      privado: filtros.privado ?? true,
+    };
+    (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
+    
     onFiltroChange(novosFiltros);
   };
 
   const handleSelectAll = () => {
-    const todosAtivos = Object.keys(filtros).reduce((acc, key) => {
-      acc[key as keyof FiltroSaude] = true;
-      return acc;
-    }, {} as FiltroSaude);
-    onFiltroChange(todosAtivos);
+    const todosNumeros = new Set(TIPOS_COM_NUMERO.map(t => t.numero));
+    setTiposSelecionados(todosNumeros);
+    const tiposDiretos = obterTiposPorNumeros(todosNumeros);
+    const novosFiltros: FiltroSaude = {
+      ...filtros,
+      municipal: filtros.municipal ?? true,
+      estadual: filtros.estadual ?? true,
+      privado: filtros.privado ?? true,
+    };
+    (novosFiltros as Record<string, unknown>).__tiposDiretos = tiposDiretos;
+    onFiltroChange(novosFiltros);
   };
 
   const handleSelectNone = () => {
-    const todosInativos = Object.keys(filtros).reduce((acc, key) => {
-      // Manter os filtros de esfera administrativa sempre ativos
-      if (key === 'municipal' || key === 'estadual' || key === 'privado') {
-        acc[key as keyof FiltroSaude] = true;
-      } else {
-        acc[key as keyof FiltroSaude] = false;
-      }
-      return acc;
-    }, {} as FiltroSaude);
-    onFiltroChange(todosInativos);
+    setTiposSelecionados(new Set());
+    const novosFiltros: FiltroSaude = {
+      ...filtros,
+      municipal: filtros.municipal ?? true,
+      estadual: filtros.estadual ?? true,
+      privado: filtros.privado ?? true,
+    };
+    (novosFiltros as Record<string, unknown>).__tiposDiretos = [];
+    onFiltroChange(novosFiltros);
   };
 
-  const filtrosAtivos = Object.values(filtros).filter(Boolean).length;
-  const totalFiltros = Object.keys(filtros).length;
+  // Agrupar tipos por categoria
+  const agruparTiposPorCategoria = () => {
+    const categorias: Record<string, typeof TIPOS_COM_NUMERO> = {};
+    
+    TIPOS_COM_NUMERO.forEach(tipoInfo => {
+      const cat = tipoInfo.categoria;
+      if (!categorias[cat]) {
+        categorias[cat] = [];
+      }
+      categorias[cat].push(tipoInfo);
+    });
+
+    return categorias;
+  };
+
+  if (carregando) {
+    return (
+      <div className={`space-y-4 ${className}`}>
+        <div className="text-center py-4">
+          <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-sm text-gray-600">Carregando tipos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const categorias = agruparTiposPorCategoria();
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -67,208 +140,75 @@ export function HealthLayerSelector({
         <div className="text-sm text-gray-600 mb-3">
           Selecione os tipos de estabelecimentos que deseja visualizar:
           <span className="ml-2 font-medium text-dark-primary">
-            {filtrosAtivos} de {totalFiltros} selecionados
+            {tiposSelecionados.size} de {TIPOS_COM_NUMERO.length} selecionados
           </span>
         </div>
 
-        {/* Tipos Principais */}
-        <div className="mb-4">
-          <h4 className="text-sm font-semibold text-gray-800 mb-2">🏥 Tipos Principais</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {/* UBS */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.ubs}
-                onChange={(e) => handleFiltroChange("ubs", e.target.checked)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.UBS.icone} UBS
-              </span>
-            </label>
+        {/* Mostrar tipos agrupados por categoria */}
+        {Object.entries(categorias).map(([categoria, tiposNumerados]) => {
+          if (tiposNumerados.length === 0) return null;
+          
+          const emojiCategoria: Record<string, string> = {
+            'Principais': '🏥',
+            'Urgência': '🚑',
+            'Ambulatorial': '🏥',
+            'Especialidades': '🔬',
+            'Saúde Mental': '🧠',
+            'Diagnóstico': '🔍',
+            'Odontologia': '🦷',
+            'Reabilitação': '♿',
+            'DST/AIDS': '🔴',
+            'Outros': '📋'
+          };
 
-            {/* Hospitais */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.hospitais}
-                onChange={(e) => handleFiltroChange("hospitais", e.target.checked)}
-                className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.HOSPITAL.icone} Hospitais
-              </span>
-            </label>
-
-            {/* Postos */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.postos}
-                onChange={(e) => handleFiltroChange("postos", e.target.checked)}
-                className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.POSTO.icone} Postos
-              </span>
-            </label>
-
-            {/* AMA */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.ama}
-                onChange={(e) => handleFiltroChange("ama", e.target.checked)}
-                className="w-4 h-4 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.AMA.icone} AMA
-              </span>
-            </label>
-
-            {/* Urgência */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.urgencia}
-                onChange={(e) => handleFiltroChange("urgencia", e.target.checked)}
-                className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.URGENCIA.icone} Urgência
-              </span>
-            </label>
-
-            {/* Pronto Socorro */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.prontoSocorro}
-                onChange={(e) => handleFiltroChange("prontoSocorro", e.target.checked)}
-                className="w-4 h-4 text-red-700 bg-gray-100 border-gray-300 rounded focus:ring-red-700 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                🚨 Pronto Socorro
-              </span>
-            </label>
-
-            {/* Maternidades */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.maternidades}
-                onChange={(e) => handleFiltroChange("maternidades", e.target.checked)}
-                className="w-4 h-4 text-pink-600 bg-gray-100 border-gray-300 rounded focus:ring-pink-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.MATERNIDADE.icone} Maternidades
-              </span>
-            </label>
-
-            {/* Casa do Parto */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.casaParto}
-                onChange={(e) => handleFiltroChange("casaParto", e.target.checked)}
-                className="w-4 h-4 text-pink-700 bg-gray-100 border-gray-300 rounded focus:ring-pink-700 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                🏠 Casa do Parto
-              </span>
-            </label>
-          </div>
-        </div>
-
-        {/* Especialidades */}
-        <div className="mb-4">
-          <h4 className="text-sm font-semibold text-gray-800 mb-2">🔬 Especialidades</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {/* CAPS */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.caps}
-                onChange={(e) => handleFiltroChange("caps", e.target.checked)}
-                className="w-4 h-4 text-gray-600 bg-gray-100 border-gray-300 rounded focus:ring-gray-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.CAPS.icone} CAPS
-              </span>
-            </label>
-
-            {/* Saúde Bucal */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.saudeBucal}
-                onChange={(e) => handleFiltroChange("saudeBucal", e.target.checked)}
-                className="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.SAUDE_BUCAL.icone} Saúde Bucal
-              </span>
-            </label>
-
-            {/* Farmácias */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.farmacias}
-                onChange={(e) => handleFiltroChange("farmacias", e.target.checked)}
-                className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.FARMACIA.icone} Farmácias
-              </span>
-            </label>
-
-            {/* Academias */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.academias}
-                onChange={(e) => handleFiltroChange("academias", e.target.checked)}
-                className="w-4 h-4 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.ACADEMIA.icone} Academias
-              </span>
-            </label>
-
-            {/* Doenças Raras */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.doencasRaras}
-                onChange={(e) => handleFiltroChange("doencasRaras", e.target.checked)}
-                className="w-4 h-4 text-slate-600 bg-gray-100 border-gray-300 rounded focus:ring-slate-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {TIPOS_ESTABELECIMENTO.DOENCAS_RARAS.icone} Doenças Raras
-              </span>
-            </label>
-
-            {/* Programas e Serviços */}
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filtros.programas}
-                onChange={(e) => handleFiltroChange("programas", e.target.checked)}
-                className="w-4 h-4 text-gray-700 bg-gray-100 border-gray-300 rounded focus:ring-gray-700 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                📋 Programas e Serviços
-              </span>
-            </label>
-          </div>
-        </div>
+          return (
+            <div key={categoria} className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                {emojiCategoria[categoria] || '📋'} {categoria}
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {tiposNumerados.map((tipoNumero) => {
+                  const estaSelecionado = tiposSelecionados.has(tipoNumero.numero);
+                  
+                  return (
+                    <label 
+                      key={tipoNumero.numero} 
+                      className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={estaSelecionado}
+                        onChange={() => handleNumeroToggle(tipoNumero.numero)}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                      <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <span style={{ color: estaSelecionado ? tipoNumero.cor : '#6B7280' }}>
+                          {tipoNumero.nomeFormatado}
+                        </span>
+                        <span 
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-lg border-2"
+                          style={{ 
+                            backgroundColor: estaSelecionado ? tipoNumero.cor : '#E5E7EB',
+                            color: estaSelecionado ? '#FFFFFF' : '#6B7280',
+                            borderColor: estaSelecionado ? tipoNumero.cor : '#D1D5DB',
+                            boxShadow: estaSelecionado 
+                              ? `0 2px 4px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.1), inset 0 2px 2px rgba(255,255,255,0.3)`
+                              : `0 1px 2px rgba(0,0,0,0.1)`
+                          }}
+                        >
+                          {tipoNumero.numero}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
 
         {/* Avisar quando nenhum tipo está selecionado */}
-        {Object.entries(filtros)
-          .filter(([key]) => key !== 'municipal' && key !== 'estadual' && key !== 'privado')
-          .every(([, value]) => !value) && (
+        {tiposSelecionados.size === 0 && !carregando && (
           <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800 font-medium mb-1">
               ⚠️ Nenhum tipo de estabelecimento selecionado
@@ -293,7 +233,6 @@ export function HealthLayerSelector({
               type="checkbox"
               checked={filtros.municipal && filtros.estadual}
               onChange={(e) => {
-                // Quando marcado/desmarcado, altera ambos municipal e estadual
                 const novosFiltros = {
                   ...filtros,
                   municipal: e.target.checked,
@@ -313,7 +252,10 @@ export function HealthLayerSelector({
             <input
               type="checkbox"
               checked={filtros.privado}
-              onChange={(e) => handleFiltroChange("privado", e.target.checked)}
+              onChange={(e) => {
+                const novosFiltros = { ...filtros, privado: e.target.checked };
+                onFiltroChange(novosFiltros);
+              }}
               className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
             />
             <span className="text-sm font-medium text-gray-700">
@@ -325,4 +267,3 @@ export function HealthLayerSelector({
     </div>
   );
 }
-

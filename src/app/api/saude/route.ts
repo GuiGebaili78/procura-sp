@@ -21,6 +21,17 @@ export async function GET(request: NextRequest) {
     const categorias = searchParams.get("categorias");
     const estatisticas = searchParams.get("estatisticas");
 
+    // Se solicitou tipos únicos
+    const tipos = searchParams.get("tipos");
+    if (tipos === "true") {
+      const todosTipos = saudeLocalService.getTodosTipos();
+      return NextResponse.json({
+        success: true,
+        tipos: todosTipos,
+        source: "dados_locais"
+      });
+    }
+
     // Se solicitou estatísticas, retornar apenas elas
     if (estatisticas === "true") {
       const stats = saudeLocalService.getEstatisticas();
@@ -147,13 +158,32 @@ export async function POST(request: NextRequest) {
 
     console.log('[API:Saude] Buscando estabelecimentos:', { lat: coordLat, lng: coordLng, raio, filtros });
 
+    // Garantir que filtros existe e é um objeto válido
+    const filtrosValidos = filtros && typeof filtros === 'object' ? filtros : {};
+    
     // Se houver filtros, converter para tipos
-    let tiposParaBuscar = categorias;
-    if (filtros) {
-      const { filtrosParaTipos, filtrarPorEsferaAdministrativa } = await import('@/utils/saude-categorias');
-      tiposParaBuscar = filtrosParaTipos(filtros);
-      console.log('[API:Saude] 🔍 Tipos filtrados:', tiposParaBuscar);
-      console.log('[API:Saude] 🔍 Filtros:', filtros);
+    let tiposParaBuscar = categorias || [];
+    
+    if (filtrosValidos && Object.keys(filtrosValidos).length > 0) {
+      // Se houver tipos diretos (do novo sistema de numeração), usar eles
+      const filtrosComTipos = filtrosValidos as Record<string, unknown> & { __tiposDiretos?: string[] };
+      if (filtrosComTipos.__tiposDiretos && Array.isArray(filtrosComTipos.__tiposDiretos) && filtrosComTipos.__tiposDiretos.length > 0) {
+        tiposParaBuscar = filtrosComTipos.__tiposDiretos;
+        console.log('[API:Saude] 🔍 Usando tipos diretos dos números:', tiposParaBuscar);
+        console.log('[API:Saude] 🔢 Total de tipos diretos:', tiposParaBuscar.length);
+      } else {
+        // Fallback para o sistema antigo
+        try {
+          const { filtrosParaTipos } = await import('@/utils/saude-categorias');
+          tiposParaBuscar = filtrosParaTipos(filtrosValidos);
+          console.log('[API:Saude] 🔍 Tipos filtrados (sistema antigo):', tiposParaBuscar);
+          console.log('[API:Saude] ⚠️ Usando sistema antigo - tipos diretos não encontrados');
+        } catch (err) {
+          console.warn('[API:Saude] ⚠️ Erro ao converter filtros antigos:', err);
+          tiposParaBuscar = [];
+        }
+      }
+      console.log('[API:Saude] 🔍 Filtros recebidos:', Object.keys(filtrosValidos).filter(k => (filtrosValidos as Record<string, unknown>)[k] === true));
       
       // Se nenhum tipo está selecionado, retornar array vazio imediatamente
       if (!tiposParaBuscar || tiposParaBuscar.length === 0) {
@@ -170,33 +200,77 @@ export async function POST(request: NextRequest) {
       let todosEstabelecimentos = saudeLocalService.getTodosEstabelecimentos();
       console.log('[API:Saude] 📊 Total de estabelecimentos no JSON:', todosEstabelecimentos.length);
       
-      // Filtrar por tipos
-      todosEstabelecimentos = todosEstabelecimentos.filter(est => 
-        tiposParaBuscar.includes(est.tipo)
+      // Filtrar por tipos (comparação case-insensitive, trim e normalizando espaços duplos)
+      const tiposParaBuscarNormalizados = tiposParaBuscar.map(t => 
+        t.toUpperCase().trim().replace(/\s+/g, ' ')
       );
+      console.log('[API:Saude] 🔍 Tipos normalizados para buscar:', tiposParaBuscarNormalizados.length, 'tipos');
+      if (tiposParaBuscarNormalizados.length <= 5) {
+        console.log('[API:Saude] 🔍 Tipos:', tiposParaBuscarNormalizados);
+      }
+      
+      todosEstabelecimentos = todosEstabelecimentos.filter(est => {
+        // Normalizar: uppercase, trim, e normalizar espaços múltiplos para espaço simples
+        const tipoNormalizado = est.tipo.toUpperCase().trim().replace(/\s+/g, ' ');
+        const tipoBuscado = tiposParaBuscarNormalizados.find(tipoBusc => {
+          // Comparação exata
+          if (tipoBusc === tipoNormalizado) return true;
+          // Também tentar comparação sem normalizar espaços (para compatibilidade)
+          const tipoBuscSemEspacos = tipoBusc.replace(/\s+/g, ' ');
+          const tipoEstSemEspacos = tipoNormalizado.replace(/\s+/g, ' ');
+          return tipoBuscSemEspacos === tipoEstSemEspacos;
+        });
+        return !!tipoBuscado;
+      });
       console.log('[API:Saude] 📊 Após filtro por tipo:', todosEstabelecimentos.length);
       
-      // Filtrar por coordenadas e raio se especificado
+      if (todosEstabelecimentos.length === 0 && tiposParaBuscar.length > 0) {
+        console.warn('[API:Saude] ⚠️ Nenhum estabelecimento encontrado! Verificando correspondência...');
+        // Verificar se há algum tipo similar
+        const primeiroTipoBuscado = tiposParaBuscarNormalizados[0];
+        const tiposSimilares = Array.from(new Set(todosEstabelecimentos.map(e => e.tipo.toUpperCase().trim())))
+          .filter(t => t.includes(primeiroTipoBuscado.substring(0, 10)) || primeiroTipoBuscado.includes(t.substring(0, 10)));
+        if (tiposSimilares.length > 0) {
+          console.log('[API:Saude] 💡 Tipos similares encontrados no JSON:', tiposSimilares);
+        }
+      }
+      
+      // Filtrar por coordenadas e calcular distâncias (mas não filtrar por raio quando tipos específicos estão selecionados)
+      // Quando há tipos selecionados, mostrar TODOS os estabelecimentos, não apenas os próximos
       if (coordLat && coordLng) {
         const { haversineDistance } = await import('@/utils/helpers');
-        // haversineDistance retorna em METROS, então precisamos comparar em metros
-        const raioMetros = raio ? raio : 5000; // 5km = 5000m (padrão)
-        console.log('[API:Saude] 📍 Raio de busca:', raioMetros, 'metros (', raioMetros/1000, 'km)');
         
+        // Calcular distâncias para todos os estabelecimentos
         todosEstabelecimentos = todosEstabelecimentos
           .filter(est => est.latitude && est.longitude)
           .map(est => ({
             ...est,
             distancia: haversineDistance(coordLat, coordLng, est.latitude!, est.longitude!)
-          }))
-          .filter(est => est.distancia && est.distancia <= raioMetros)
-          .sort((a, b) => (a.distancia || 0) - (b.distancia || 0));
+          }));
         
-        console.log('[API:Saude] 📊 Após filtro por raio:', todosEstabelecimentos.length);
+        // Se há tipos específicos selecionados, não aplicar filtro de raio (mostrar todos)
+        // Apenas ordenar por distância para facilitar visualização
+        if (tiposParaBuscar.length > 0) {
+          todosEstabelecimentos.sort((a, b) => (a.distancia || 0) - (b.distancia || 0));
+          console.log('[API:Saude] 📍 Tipos específicos selecionados - mostrando TODOS os estabelecimentos (sem limite de raio)');
+          console.log('[API:Saude] 📊 Total de estabelecimentos:', todosEstabelecimentos.length);
+        } else {
+          // Se não há tipos específicos, aplicar filtro de raio padrão
+          const raioMetros = raio ? raio : 5000; // 5km = 5000m (padrão)
+          console.log('[API:Saude] 📍 Nenhum tipo específico - aplicando filtro de raio:', raioMetros, 'metros (', raioMetros/1000, 'km)');
+          
+          todosEstabelecimentos = todosEstabelecimentos
+            .filter(est => est.distancia && est.distancia <= raioMetros)
+            .sort((a, b) => (a.distancia || 0) - (b.distancia || 0));
+          
+          console.log('[API:Saude] 📊 Após filtro por raio:', todosEstabelecimentos.length);
+        }
+        
         if (todosEstabelecimentos.length > 0) {
-          console.log('[API:Saude] 📏 Distâncias:', todosEstabelecimentos.slice(0, 3).map(e => ({
+          console.log('[API:Saude] 📏 Distâncias (primeiros 3):', todosEstabelecimentos.slice(0, 3).map(e => ({
             nome: e.nome,
-            distancia: Math.round(e.distancia || 0) + 'm'
+            distancia: Math.round(e.distancia || 0) + 'm',
+            tipo: e.tipo
           })));
         }
       }
@@ -210,15 +284,42 @@ export async function POST(request: NextRequest) {
       };
 
       // Aplicar filtro de esfera administrativa
-      console.log('[API:Saude] 🏛️ Filtros de esfera:', {
-        municipal: filtros.municipal,
-        estadual: filtros.estadual,
-        privado: filtros.privado
-      });
+      let estabelecimentosFiltrados = resultado.estabelecimentos;
       
-      const estabelecimentosFiltrados = resultado.estabelecimentos.filter(est => 
-        filtrarPorEsferaAdministrativa(filtros, est.administracao)
-      );
+      try {
+        const { filtrarPorEsferaAdministrativa: filtrarEsfera } = await import('@/utils/saude-categorias');
+        
+        // Garantir que filtros existe e tem propriedades padrão
+        const filtrosParaEsfera = filtrosValidos && typeof filtrosValidos === 'object' ? filtrosValidos : {
+          municipal: true,
+          estadual: true,
+          privado: true
+        };
+        
+        // Garantir que as propriedades existem
+        if (!('municipal' in filtrosParaEsfera)) {
+          (filtrosParaEsfera as Record<string, unknown>).municipal = true;
+        }
+        if (!('estadual' in filtrosParaEsfera)) {
+          (filtrosParaEsfera as Record<string, unknown>).estadual = true;
+        }
+        if (!('privado' in filtrosParaEsfera)) {
+          (filtrosParaEsfera as Record<string, unknown>).privado = true;
+        }
+        
+        console.log('[API:Saude] 🏛️ Filtros de esfera:', {
+          municipal: (filtrosParaEsfera as Record<string, unknown>).municipal,
+          estadual: (filtrosParaEsfera as Record<string, unknown>).estadual,
+          privado: (filtrosParaEsfera as Record<string, unknown>).privado
+        });
+        
+        estabelecimentosFiltrados = resultado.estabelecimentos.filter(est => 
+          filtrarEsfera(filtrosParaEsfera, est.administracao)
+        );
+      } catch (err) {
+        console.warn('[API:Saude] ⚠️ Erro ao aplicar filtro de esfera administrativa:', err);
+        // Continuar sem filtrar por esfera se houver erro
+      }
 
       console.log(`[API:Saude] ✅ Encontrados ${estabelecimentosFiltrados.length} estabelecimentos após filtros de esfera`);
       

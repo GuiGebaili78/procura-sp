@@ -24,8 +24,9 @@ export const TIPOS_MAPEADOS: Record<keyof Omit<FiltroSaude, 'municipal' | 'estad
   // Saúde Mental (CAPS)
   caps: [
     'CENTRO DE ATENCAO PSICOSSOCIAL ADULTO',
-    'CENTRO DE ATENCAO PSICOSSOCIAL ALCOOL E DROGAS',
-    'CENTRO DE CONVIVENCIA E COOPERATIVA (CECCO)'
+    'CENTRO DE ATENCAO PSICOSSOCIAL INFANTIL',
+    'CENTRO DE ATENCAO  PSICOSSOCIAL INFANTIL',
+    'CENTRO DE ATENCAO PSICOSSOCIAL ALCOOL E DROGAS'
   ],
   capsInfantil: [
     'CENTRO DE ATENCAO PSICOSSOCIAL INFANTIL',
@@ -76,7 +77,7 @@ export const TIPOS_MAPEADOS: Record<keyof Omit<FiltroSaude, 'municipal' | 'estad
   instituto: ['INSTITUTO'],
   apae: ['ASSOCIACAO DE PAIS E  AMIGOS EXCEPCIONAIS'],
   
-  // Programas e Serviços
+  // Programas e Serviços (não inclui CECCO que é número 34)
   programas: ['PROGRAMAS E SERVICOS', 'OUTROS ESTABELECIMENTOS SERVICOS E PROGRAMAS'],
   programasGerais: ['PROGRAMAS E SERVICOS', 'OUTROS ESTABELECIMENTOS SERVICOS E PROGRAMAS'],
   supervisao: ['SUPERVISAO DE VIGILANCIA EM SAUDE'],
@@ -120,16 +121,16 @@ export function filtrarPorEsferaAdministrativa(
   filtros: FiltroSaude,
   administracao: string | null
 ): boolean {
-  // Se nenhum filtro de esfera está ativo, retornar false
+  // Se nenhum filtro de esfera está ativo, retornar true (não filtrar)
   if (!filtros.municipal && !filtros.estadual && !filtros.privado) {
-    return false;
+    return true;
   }
   
   if (!administracao) {
     return false;
   }
   
-  const admin = administracao.toLowerCase();
+  const admin = administracao.toLowerCase().trim();
   
   // Verificar se corresponde aos filtros ativos
   if (admin === 'municipal' && filtros.municipal) {
