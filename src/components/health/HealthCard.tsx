@@ -14,13 +14,19 @@ export function HealthCard({ estabelecimento, onSelect, className = "" }: Health
   const [mostrarDescricao, setMostrarDescricao] = useState(false);
   
   // Determinar o tipo e cor do estabelecimento
-  const getTipoInfo = () => {
-    // Se tem tipo direto, usar info por tipo
+  const getTipoInfo = (): {
+    numero: number;
+    tipo: string;
+    cor: string;
+    categoria: string;
+    nomeFormatado: string;
+  } => {
+    // Sempre tentar usar o tipo do estabelecimento primeiro
     if (estabelecimento.tipo) {
       return obterInfoPorTipo(estabelecimento.tipo);
     }
     
-    // Caso contrário, mapear códigos para tipos conhecidos
+    // Caso contrário, mapear códigos para tipos conhecidos e obter info
     const tipoMap: Record<string, keyof typeof TIPOS_ESTABELECIMENTO> = {
       "05": "UBS",
       "01": "HOSPITAL", 
@@ -35,7 +41,24 @@ export function HealthCard({ estabelecimento, onSelect, className = "" }: Health
     };
     
     const tipo = tipoMap[estabelecimento.tipoCodigo] || "UBS";
-    return TIPOS_ESTABELECIMENTO[tipo];
+    const tipoEstabelecimento = TIPOS_ESTABELECIMENTO[tipo];
+    
+    // Tentar obter info pelo nome do tipo
+    const infoPorTipo = obterInfoPorTipo(tipoEstabelecimento.nome);
+    
+    // Se encontrou info com numero válido, retornar
+    if (infoPorTipo.numero !== 99) {
+      return infoPorTipo;
+    }
+    
+    // Fallback: retornar estrutura compatível com numero
+    return {
+      numero: 99,
+      tipo: tipoEstabelecimento.nome,
+      cor: tipoEstabelecimento.cor,
+      categoria: 'Outros',
+      nomeFormatado: tipoEstabelecimento.nome,
+    };
   };
 
   const tipoInfo = getTipoInfo();
@@ -91,7 +114,7 @@ export function HealthCard({ estabelecimento, onSelect, className = "" }: Health
                 {estabelecimento.nome}
               </h3>
               <p className="text-xs text-gray-600 mt-1">
-                {tipoInfo.nome}
+                {tipoInfo.nomeFormatado}
               </p>
             </div>
           </div>
@@ -262,7 +285,7 @@ export function HealthCard({ estabelecimento, onSelect, className = "" }: Health
             <div className="p-6">
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Tipo de Estabelecimento</h4>
-                <p className="text-sm text-gray-600">{tipoInfo.nome}</p>
+                <p className="text-sm text-gray-600">{tipoInfo.nomeFormatado}</p>
               </div>
 
               <div className="mb-4">

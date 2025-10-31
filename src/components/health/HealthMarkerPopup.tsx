@@ -110,7 +110,7 @@ export function HealthMarkerPopup({ estabelecimentos }: HealthMarkerPopupProps) 
             return (
               <span 
                 key={tipoDisplay} 
-                className="inline-block px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full font-medium flex items-center gap-1"
+                className="inline-flex px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full font-medium items-center gap-1"
                 style={{ borderColor: iconeTipo.cor }}
               >
                 <span 
