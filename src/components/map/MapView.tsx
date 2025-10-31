@@ -16,7 +16,6 @@ import { TrechoCoordinates } from "../../types/cataBagulho";
 import { FeiraLivre } from "../../types/feiraLivre";
 import { EstabelecimentoSaude } from "../../lib/services/saudeLocal.service";
 import { HealthMarkerPopup } from "../health/HealthMarkerPopup";
-import { obterIconePorTipo } from "../../utils/saude-icones";
 import { obterTipoMaisFrequente, obterInfoPorTipo } from "../../utils/saude-tipos-unicos";
 
 // Ícones customizados

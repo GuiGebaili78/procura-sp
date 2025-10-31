@@ -111,7 +111,7 @@ function formatarNomeTipo(tipo: string): string {
   // Dividir o tipo em palavras (incluindo palavras com barras ou parênteses)
   const palavras = tipo.split(/\s+/);
   
-  return palavras.map((palavra, index) => {
+  return palavras.map((palavra) => {
     // Remover espaços extras e normalizar
     const palavraLimpa = palavra.trim();
     if (!palavraLimpa) return '';

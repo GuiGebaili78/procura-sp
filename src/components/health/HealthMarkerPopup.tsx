@@ -56,7 +56,6 @@ export function HealthMarkerPopup({ estabelecimentos }: HealthMarkerPopupProps) 
 
   // Agrupar estabelecimentos por tipo
   const estabelecimentosPorTipo = estabelecimentos.reduce((acc, est) => {
-    const tipoInfo = obterInfoPorTipo(est.tipo);
     const tipoDisplay = est.tipo; // Usar o nome exato do tipo
     if (!acc[tipoDisplay]) {
       acc[tipoDisplay] = [];

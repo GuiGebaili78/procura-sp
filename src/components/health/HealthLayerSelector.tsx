@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FiltroSaude } from "../../types/saude";
-import { TIPOS_COM_NUMERO, obterTiposPorNumeros, obterInfoPorTipo } from "../../utils/saude-tipos-unicos";
+import { TIPOS_COM_NUMERO, obterTiposPorNumeros } from "../../utils/saude-tipos-unicos";
 
 interface HealthLayerSelectorProps {
   filtros: FiltroSaude;

@@ -259,11 +259,11 @@ export function obterTipoMaisFrequente(
  * Converte números selecionados para filtros booleanos
  * Cada número selecionado busca apenas seus tipos correspondentes
  */
-export function converterNumerosParaFiltros(
+export async function converterNumerosParaFiltros(
   numeros: Set<number> | number[],
   filtrosAtuais: Record<string, boolean>
-): Record<string, boolean> {
-  const { TIPOS_MAPEADOS } = require('./saude-categorias');
+): Promise<Record<string, boolean>> {
+  const { TIPOS_MAPEADOS } = await import('./saude-categorias');
   const novosFiltros = { ...filtrosAtuais };
   
   // Resetar todos os filtros de tipo
