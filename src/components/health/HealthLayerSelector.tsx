@@ -115,31 +115,31 @@ export function HealthLayerSelector({
   const categorias = agruparTiposPorCategoria();
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-dark-primary">
+    <div className={`space-y-3 sm:space-y-4 ${className}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h3 className="text-base sm:text-lg font-semibold text-dark-primary">
           🏥 Filtros de Estabelecimentos
         </h3>
         <div className="flex gap-2">
           <button
             onClick={handleSelectAll}
-            className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 transition-colors"
+            className="px-3 py-1.5 text-xs bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 active:bg-blue-300 transition-colors touch-manipulation"
           >
             Todos
           </button>
           <button
             onClick={handleSelectNone}
-            className="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
+            className="px-3 py-1.5 text-xs bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 active:bg-gray-300 transition-colors touch-manipulation"
           >
             Nenhum
           </button>
         </div>
       </div>
 
-      <div className="p-4 bg-accent/5 border border-accent/20 rounded-lg">
-        <div className="text-sm text-gray-600 mb-3">
+      <div className="p-3 sm:p-4 bg-accent/5 border border-accent/20 rounded-lg">
+        <div className="text-xs sm:text-sm text-gray-600 mb-3">
           Selecione os tipos de estabelecimentos que deseja visualizar:
-          <span className="ml-2 font-medium text-dark-primary">
+          <span className="block sm:inline sm:ml-2 mt-1 sm:mt-0 font-medium text-dark-primary">
             {tiposSelecionados.size} de {TIPOS_COM_NUMERO.length} selecionados
           </span>
         </div>
@@ -162,42 +162,43 @@ export function HealthLayerSelector({
           };
 
           return (
-            <div key={categoria} className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-800 mb-2">
+            <div key={categoria} className="mb-3 sm:mb-4">
+              <h4 className="text-xs sm:text-sm font-semibold text-gray-800 mb-2">
                 {emojiCategoria[categoria] || '📋'} {categoria}
               </h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-3">
                 {tiposNumerados.map((tipoNumero) => {
                   const estaSelecionado = tiposSelecionados.has(tipoNumero.numero);
                   
                   return (
                     <label 
                       key={tipoNumero.numero} 
-                      className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                      className="flex items-start gap-2 sm:space-x-2 cursor-pointer hover:bg-gray-50 active:bg-gray-100 p-2 sm:p-2.5 rounded transition-colors touch-manipulation min-h-[44px]"
                     >
                       <input
                         type="checkbox"
                         checked={estaSelecionado}
                         onChange={() => handleNumeroToggle(tipoNumero.numero)}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        className="w-5 h-5 sm:w-4 sm:h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 flex-shrink-0 mt-0.5"
                       />
-                      <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <span style={{ color: estaSelecionado ? tipoNumero.cor : '#6B7280' }}>
-                          {tipoNumero.nomeFormatado}
-                        </span>
-                        <span 
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-lg border-2"
-                          style={{ 
-                            backgroundColor: estaSelecionado ? tipoNumero.cor : '#E5E7EB',
-                            color: estaSelecionado ? '#FFFFFF' : '#6B7280',
-                            borderColor: estaSelecionado ? tipoNumero.cor : '#D1D5DB',
-                            boxShadow: estaSelecionado 
-                              ? `0 2px 4px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.1), inset 0 2px 2px rgba(255,255,255,0.3)`
-                              : `0 1px 2px rgba(0,0,0,0.1)`
-                          }}
-                        >
-                          {tipoNumero.numero}
-                        </span>
+                      <span 
+                        className="w-8 h-8 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold flex-shrink-0 shadow-lg border-2"
+                        style={{ 
+                          backgroundColor: estaSelecionado ? tipoNumero.cor : '#E5E7EB',
+                          color: estaSelecionado ? '#FFFFFF' : '#6B7280',
+                          borderColor: estaSelecionado ? tipoNumero.cor : '#D1D5DB',
+                          boxShadow: estaSelecionado 
+                            ? `0 2px 4px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.1), inset 0 2px 2px rgba(255,255,255,0.3)`
+                            : `0 1px 2px rgba(0,0,0,0.1)`
+                        }}
+                      >
+                        {tipoNumero.numero}
+                      </span>
+                      <span 
+                        className="text-xs sm:text-sm font-medium text-gray-700 flex-1 leading-tight"
+                        style={{ color: estaSelecionado ? tipoNumero.cor : '#6B7280' }}
+                      >
+                        {tipoNumero.nomeFormatado}
                       </span>
                     </label>
                   );
@@ -210,7 +211,7 @@ export function HealthLayerSelector({
         {/* Avisar quando nenhum tipo está selecionado */}
         {tiposSelecionados.size === 0 && !carregando && (
           <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800 font-medium mb-1">
+            <p className="text-xs sm:text-sm text-yellow-800 font-medium mb-1">
               ⚠️ Nenhum tipo de estabelecimento selecionado
             </p>
             <p className="text-xs text-yellow-700">
@@ -221,14 +222,14 @@ export function HealthLayerSelector({
       </div>
 
       {/* Filtros por Esfera Administrativa */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="text-sm text-gray-600 mb-3">
+      <div className="p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="text-xs sm:text-sm text-gray-600 mb-3">
           Selecione a esfera administrativa:
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
           {/* Público (Municipal + Estadual) */}
-          <label className="flex items-center space-x-2 cursor-pointer">
+          <label className="flex items-center gap-2 sm:space-x-2 cursor-pointer p-2 hover:bg-blue-100/50 active:bg-blue-100 rounded transition-colors touch-manipulation min-h-[44px]">
             <input
               type="checkbox"
               checked={filtros.municipal && filtros.estadual}
@@ -240,15 +241,15 @@ export function HealthLayerSelector({
                 };
                 onFiltroChange(novosFiltros);
               }}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              className="w-5 h-5 sm:w-4 sm:h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 flex-shrink-0"
             />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs sm:text-sm font-medium text-gray-700">
               🏛️ Público (Municipal + Estadual)
             </span>
           </label>
 
           {/* Privado */}
-          <label className="flex items-center space-x-2 cursor-pointer">
+          <label className="flex items-center gap-2 sm:space-x-2 cursor-pointer p-2 hover:bg-green-100/50 active:bg-green-100 rounded transition-colors touch-manipulation min-h-[44px]">
             <input
               type="checkbox"
               checked={filtros.privado}
@@ -256,9 +257,9 @@ export function HealthLayerSelector({
                 const novosFiltros = { ...filtros, privado: e.target.checked };
                 onFiltroChange(novosFiltros);
               }}
-              className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+              className="w-5 h-5 sm:w-4 sm:h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2 flex-shrink-0"
             />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs sm:text-sm font-medium text-gray-700">
               🏥 Privado
             </span>
           </label>
